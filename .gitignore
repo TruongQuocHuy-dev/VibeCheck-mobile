@@ -73,3 +73,12 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# AI docs
+AI_Agent.md
+AI_Gencode.md
+AI.md
+
+# Environment
+.env
+.env.*

@@ -1,97 +1,155 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# VibeCheck Mobile
 
-# Getting Started
+VibeCheck is a **social discovery mobile application** built with **React Native and TypeScript**, designed to help people discover and connect with others who share similar vibes, interests, and activities.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+This project follows **Clean Architecture** and **Atomic Design principles** to ensure scalability, maintainability, and high code quality.
 
-## Step 1: Start Metro
+---
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## Tech Stack
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+* React Native CLI
+* TypeScript
+* React Navigation
+* Clean Architecture
+* Atomic Design (Atoms → Molecules → Organisms → Templates)
 
-```sh
-# Using npm
+---
+
+## Project Structure
+
+```
+VibeCheck-mobile
+│
+├── android/                # Android native project
+├── ios/                    # iOS native project
+│
+├── src/
+│   ├── components/         # Reusable UI components
+│   │   ├── atoms/
+│   │   ├── molecules/
+│   │   ├── organisms/
+│   │   └── templates/
+│   │
+│   ├── screens/            # Application screens
+│   ├── hooks/              # Business logic hooks
+│   ├── services/           # API calls
+│   ├── types/              # TypeScript interfaces
+│   ├── models/             # Domain entities
+│   ├── validators/         # Validation schemas
+│   ├── constants/          # Design tokens (colors, spacing, typography)
+│   └── assets/             # Images, icons, fonts
+│
+├── App.tsx
+├── package.json
+└── README.md
+```
+
+---
+
+## Getting Started
+
+### 1 Install dependencies
+
+```
+npm install
+```
+
+or
+
+```
+yarn install
+```
+
+---
+
+### 2 Run Metro
+
+```
 npm start
-
-# OR using Yarn
-yarn start
 ```
 
-## Step 2: Build and run your app
+---
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+### 3 Run on Android
 
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+```
+npx react-native run-android
 ```
 
-### iOS
+---
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+### 4 Run on iOS
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+```
+npx react-native run-ios
 ```
 
-Then, and every time you update your native dependencies, run:
+Requirements:
 
-```sh
-bundle exec pod install
+* macOS
+* Xcode
+* CocoaPods
+
+---
+
+## Development Principles
+
+The project follows strict architecture rules:
+
+### Clean Architecture Layers
+
+```
+Presentation
+   ↓
+Application
+   ↓
+Domain
+   ↓
+Infrastructure
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+Each layer has clear responsibilities to maintain a scalable and testable codebase.
 
-```sh
-# Using npm
-npm run ios
+---
 
-# OR using Yarn
-yarn ios
+### Atomic Design
+
+Components are organized by complexity:
+
+```
+atoms
+molecules
+organisms
+templates
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+---
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+### Code Quality Rules
 
-## Step 3: Modify your app
+* No hardcoded design values
+* Design tokens must be used
+* TypeScript strict typing
+* Components must be under 300 lines
+* Business logic lives in hooks
+* API calls only in services
 
-Now that you have successfully run the app, let's make changes!
+---
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+## Features (Planned)
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+* User discovery feed
+* Profile system
+* Swipe interactions
+* Real-time matching
+* Chat system
+* Notifications
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+---
 
-## Congratulations! :tada:
+## License
 
-You've successfully run and modified your React Native App. :partying_face:
+This project is currently private and under development.
 
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+---
