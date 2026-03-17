@@ -1,7 +1,10 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { CustomTabBar } from '../components/navigation/CustomTabBar';
-import { DiscoveryScreen, MatchesScreen, ChatScreen, ProfileScreen } from '../screens';
+import { DiscoveryScreen } from '../features/discovery/presentation/screens/DiscoveryScreen';
+import { MatchesScreen } from '../features/matches/presentation/screens/MatchesScreen';
+import { ChatScreen } from '../features/chat/presentation/screens/ChatScreen';
+import { ProfileScreen } from '../features/profile/presentation/screens/ProfileScreen';
 import { TabParamList } from './types';
 
 const Tab = createBottomTabNavigator<TabParamList>();

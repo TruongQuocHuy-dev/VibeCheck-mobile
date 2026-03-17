@@ -28,11 +28,7 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState('');
   const [timer, setTimer] = useState(30);
 
-  const { sendOtp, loading: loadingSend, error: errorSend } = useSendOtp();
-  const { verifyOtp, loading: loadingVerify, error: errorVerify } = useVerifyOtp(onLoginSuccess ?? (() => {}));
-  const { login, loading: loadingLogin, error: errorLogin } = useLoginPassword(onLoginSuccess ?? (() => {}));
-
-  useEffect(() => {
+  React.useEffect(() => {
     let interval: any = null;
     if (step === 'OTP' && timer > 0) {
       interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
@@ -53,23 +49,22 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({ onLoginSuccess }) => {
   };
 
   const handleContinue = async () => {
+    // Fake Flow cho Giai đoạn 1: Chỉ UI
     if (step === 'PHONE') {
-      const nextStep = await sendOtp(phoneNumber, () => setStep('OTP'));
-      if (nextStep === 'PASSWORD') setStep('PASSWORD');
+      setStep('OTP');
     } else if (step === 'OTP') {
-      await verifyOtp(phoneNumber, otp);
+      if (onLoginSuccess) onLoginSuccess();
     } else if (step === 'PASSWORD') {
-      await login(phoneNumber, password);
+      if (onLoginSuccess) onLoginSuccess();
     }
   };
 
   const resendOtp = async () => {
     setTimer(30);
-    await sendOtp(phoneNumber, () => {});
   };
 
-  const loading = loadingSend || loadingVerify || loadingLogin;
-  const errorMsg = errorSend || errorVerify || errorLogin;
+  const loading = false;
+  const errorMsg = null;
 
   const renderContent = () => {
     switch (step) {

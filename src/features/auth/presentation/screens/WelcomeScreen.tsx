@@ -7,7 +7,7 @@ import Animated from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../../navigation/types';
-import { WelcomeScreenProps } from '../../../../types/screens';
+import { WelcomeScreenProps } from '../../domain/types/welcome.types';
 import { ASSETS } from '../../../../assets/assets';
 import { colors } from '../../../../constants/colors';
 

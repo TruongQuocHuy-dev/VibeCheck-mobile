@@ -4,7 +4,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../../constants/colors';
 import { spacing } from '../../constants/spacing';
 import { typography } from '../../constants/typography';
-import { BorderInputProps } from '../../types/presentation/components/border-input.types';
+import { BorderInputProps } from '../../types/border-input.types';
 
 /**
  * Reusable Atom component rendering a Styled Input with Left Icon container view.

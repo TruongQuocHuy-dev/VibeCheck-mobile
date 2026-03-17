@@ -17,7 +17,21 @@ import { GradientButton } from '../../../../components/atoms/GradientButton';
  * Screen atom responsible for rendering the Profile Creation workflows.
  */
 export const ProfileSetupScreen: React.FC<ProfileSetupScreenProps> = ({ onComplete }) => {
-  const { nickname, birthYear, avatarUri, setNickname, setBirthYear, handlePickAvatar, handleSubmit } = useProfileSetup(onComplete);
+  const [nickname, setNickname] = React.useState('');
+  const [birthYear, setBirthYear] = React.useState('');
+  const [avatarUri, setAvatarUri] = React.useState<string | undefined>(undefined);
+
+  const handlePickAvatar = () => {
+    // Mock Avatar Picker
+    setAvatarUri('https://avatar.iran.liara.run/public/boy');
+  };
+
+  const handleSubmit = () => {
+    if (onComplete) onComplete();
+  };
+
+  const loading = false;
+  const error = null;
 
   const isFormValid = nickname.trim().length > 0 && birthYear.length === 4;
 
@@ -80,15 +94,19 @@ export const ProfileSetupScreen: React.FC<ProfileSetupScreenProps> = ({ onComple
                 testID="profile-setup-year-input"
               />
             </View>
+            
+            {error && (
+              <Text style={styles.errorText}>{error}</Text>
+            )}
           </View>
 
 
           {/* Submit Section */}
           <View style={styles.submitSection}>
             <GradientButton
-              title="Bắt đầu quẹt Vibe ⚡"
+              title={loading ? "Đang xử lý..." : "Bắt đầu quẹt Vibe ⚡"}
               onPress={handleSubmit}
-              disabled={!isFormValid}
+              disabled={!isFormValid || loading}
               testID="profile-setup-submit-button"
             />
 
@@ -176,5 +194,11 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.3)',
     textAlign: 'center',
     marginTop: spacing.xs,
+  },
+  errorText: {
+    color: '#FF4D4D',
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
   },
 });

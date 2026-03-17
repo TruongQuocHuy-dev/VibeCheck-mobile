@@ -5,7 +5,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { colors } from '../../constants/colors';
 import { spacing } from '../../constants/spacing';
 import { typography } from '../../constants/typography';
-import { GradientButtonProps } from '../../types/presentation/components/gradient-button.types';
+import { GradientButtonProps } from '../../types/gradient-button.types';
 
 
 

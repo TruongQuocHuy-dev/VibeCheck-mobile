@@ -27,15 +27,20 @@ export const colors = {
   iconMuted: 'rgba(255, 255, 255, 0.4)',
   bgTooltip: 'rgba(255, 255, 255, 0.05)',
   cyanBorder: 'rgba(0, 243, 255, 0.3)',
-  cyanBg: 'rgba(0, 243, 255, 0.05)',
+  cyanBg: 'rgba(0, 243, 255, 0.12)',
+  pinkBg: 'rgba(255, 0, 153, 0.12)',
+  bgBlack: '#121212',
+  whiteOpacity20: 'rgba(255, 255, 255, 0.2)',
+  overlayLight: 'rgba(255,255,255,0.05)',
+  overlayBorder: 'rgba(255,255,255,0.1)',
+  textOpacity60: 'rgba(255,255,255,0.6)',
+  textOpacity80: 'rgba(255,255,255,0.8)',
+  gradientDarkStart: '#1A2B2C',
+  gradientDarkEnd: '#1B263B',
 } as const;
-
-
-
-
 
 export const gradients = {
   primary: ['#6C63FF', '#FF6B6B'],
   boost: ['#FFD700', '#FFA500'],
   reveal: ['#00D09C', '#6C63FF'],
-} as const;
+} as const;
