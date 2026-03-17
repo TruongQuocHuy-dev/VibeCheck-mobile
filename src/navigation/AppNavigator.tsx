@@ -1,11 +1,11 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { WelcomeScreen } from '../screens/Welcome';
-import { OtpScreen } from '../screens/Auth/OtpScreen';
+import { WelcomeScreen } from '../features/auth/presentation/screens/WelcomeScreen';
+import { OtpScreen } from '../features/auth/presentation/screens/OtpScreen';
 import { TabNavigator } from './TabNavigator';
 import { RootStackParamList } from './types';
 
-import { ProfileSetupScreen } from '../screens/Auth/ProfileSetupScreen';
+import { ProfileSetupScreen } from '../features/auth/presentation/screens/ProfileSetupScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 

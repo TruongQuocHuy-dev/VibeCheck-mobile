@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { colors } from '../../constants/colors';
-import { spacing, sizes } from '../../constants/spacing';
-import { typography } from '../../constants/typography';
+import { colors } from '../../../../constants/colors';
+import { spacing, sizes } from '../../../../constants/spacing';
+import { typography } from '../../../../constants/typography';
 
 /**
  * Props for the Keypad molecule component.

@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, TouchableOpacity, Image, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { colors } from '../../constants/colors';
-import { spacing } from '../../constants/spacing';
-import { typography } from '../../constants/typography';
-import { AvatarPickerProps } from '../../types/presentation/components/avatar-picker.types';
+import { colors } from '../../../../constants/colors';
+import { spacing } from '../../../../constants/spacing';
+import { typography } from '../../../../constants/typography';
+import { AvatarPickerProps } from '../../domain/types/avatar-picker.types';
 
 /**
  * Reusable Molecule component rendering a Circular Avatar frame with Blur layout overlap.

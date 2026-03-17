@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../../constants/colors';
-import { spacing } from '../../constants/spacing';
-import { typography } from '../../constants/typography';
-import { OtpInputGroupProps } from '../../types/presentation/components/otp-input.types';
+import { colors } from '../../../../constants/colors';
+import { spacing } from '../../../../constants/spacing';
+import { typography } from '../../../../constants/typography';
+import { OtpInputGroupProps } from '../../domain/types/otp-input.types';
 
 
 /**
