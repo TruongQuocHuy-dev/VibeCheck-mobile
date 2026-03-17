@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Dimensions,
   StatusBar,
+  ImageBackground,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -34,43 +35,44 @@ export const DiscoveryScreen: React.FC = () => {
         activeOpacity={0.9}
         onPress={() => handleCardPress(item)}
       >
-        <LinearGradient
-          colors={[
-            colors.gradientDarkStart,
-            item.backgroundColor || colors.gradientDarkEnd,
-          ]}
+        <ImageBackground
+          source={item.avatar ? { uri: item.avatar } : undefined}
           style={styles.cardGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          imageStyle={{ borderRadius: 24 }}
         >
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTag}>{item.title.toUpperCase()}</Text>
-          </View>
-
-          <View style={styles.cardBody}>
-            <Text style={styles.cardSubtitle} numberOfLines={3}>
-              {item.subtitle}
-            </Text>
-          </View>
-
-          <View style={styles.cardFooter}>
-            <View style={styles.locationContainer}>
-              <Icon name="location" size={16} color={colors.neonCyan} />
-              <Text style={styles.locationText} numberOfLines={1}>
-                {item.distance} - {item.location}
-              </Text>
+          {/* Bottom Info Overlay */}
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.85)']}
+            style={styles.bottomOverlay}
+          >
+            <View style={styles.infoRow}>
+              <Text style={styles.nameText}>{item.title}</Text>
+              <Text style={styles.ageText}>, 24</Text>
             </View>
+            <Text style={styles.bioText} numberOfLines={2}>{item.subtitle}</Text>
+            
+            <View style={styles.cardFooter}>
+              <View style={styles.locationContainerCard}>
+                <Icon name="location" size={14} color={colors.neonCyan} />
+                <Text style={styles.locationTextCard} numberOfLines={1}>
+                  {item.distance} - {item.location}
+                </Text>
+              </View>
 
-            <View style={styles.actionButtons}>
-              <TouchableOpacity style={[styles.actionButton, styles.likeButtonSmall]}>
-                <Icon name="heart" size={20} color={colors.white} />
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.actionButton, styles.skipButtonSmall]}>
-                <Icon name="arrow-undo" size={20} color={colors.bgBlack} />
-              </TouchableOpacity>
+              <View style={styles.actionButtons}>
+                <TouchableOpacity style={[styles.actionButton, styles.skipButtonSmall]}>
+                  <Icon name="close" size={20} color={colors.white} />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.actionButton, styles.likeButtonSmall]}
+                  onPress={() => navigation.navigate('MatchReveal')}
+                >
+                  <Icon name="heart" size={20} color={colors.white} />
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </LinearGradient>
+          </LinearGradient>
+        </ImageBackground>
       </TouchableOpacity>
     );
   };
@@ -82,7 +84,7 @@ export const DiscoveryScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTitleContainer}>
-          <Icon name="radar" size={24} color={colors.neonCyan} />
+          <Icon name="compass-outline" size={24} color={colors.neonCyan} />
           <Text style={styles.headerTitle}>RADAR <Text style={styles.headerSubtitle}>GẦN ĐÂY</Text></Text>
         </View>
         <TouchableOpacity style={styles.menuButton}>
@@ -159,8 +161,47 @@ const styles = StyleSheet.create({
   },
   cardGradient: {
     flex: 1,
-    padding: 24,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end', // overlay content aligns to bottom
+  },
+  bottomOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 4,
+  },
+  nameText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.white,
+  },
+  ageText: {
+    fontSize: 20,
+    color: colors.white,
+    opacity: 0.9,
+  },
+  bioText: {
+    fontSize: 14,
+    color: colors.white,
+    opacity: 0.8,
+    marginTop: 4,
+  },
+  locationContainerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 8,
+  },
+  locationTextCard: {
+    fontSize: 12,
+    color: colors.neonCyan,
   },
   cardHeader: {
     alignItems: 'center',

@@ -8,6 +8,7 @@ export type RootStackParamList = {
   Main: undefined;
   ChatDetail: { chatId: string; name: string; avatar: string; isOnline: boolean };
   DiscoveryDetail: { cards: VibeCard[]; initialIndex: number };
+  MatchReveal: undefined;
 }
 
 

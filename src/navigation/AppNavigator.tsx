@@ -8,6 +8,7 @@ import { TabNavigator } from './TabNavigator';
 import { RootStackParamList } from './types';
 import { ChatDetailScreen } from '../features/chat/presentation/screens/ChatDetailScreen';
 import { DiscoveryDetailScreen } from '../features/discovery/presentation/screens/DiscoveryDetailScreen';
+import { MatchRevealScreen } from '../features/discovery/presentation/screens/MatchRevealScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -49,6 +50,7 @@ export const AppNavigator = () => {
           <Stack.Screen name="Main" component={TabNavigator} />
           <Stack.Screen name="ChatDetail" component={ChatDetailScreen} />
           <Stack.Screen name="DiscoveryDetail" component={DiscoveryDetailScreen} />
+          <Stack.Screen name="MatchReveal" component={MatchRevealScreen} />
         </>
       )}
     </Stack.Navigator>

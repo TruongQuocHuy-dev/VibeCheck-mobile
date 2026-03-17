@@ -1,19 +1,18 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   StatusBar,
-  PanResponder,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import LinearGradient from 'react-native-linear-gradient';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 import { useDiscoveryDetail } from '../../application/hooks/useDiscoveryDetail';
+import { DiscoveryCard } from '../components/DiscoveryCard';
 import { colors } from '../../../../constants/colors';
 import { spacing } from '../../../../constants/spacing';
 
@@ -26,43 +25,17 @@ export const DiscoveryDetailScreen: React.FC = () => {
 
   const {
     currentCard,
-    translateX,
-    translateY,
-    rotate,
-    opacity,
+    nextCard,
     swipe,
-    setTranslateX,
-    setRotate,
+    panHandlers,
+    animatedStyle,
+    backgroundCardStyle,
+    tintStyle,
+    skipStyle,
+    likeStyle,
   } = useDiscoveryDetail(cards, initialIndex, () => navigation.goBack());
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 10,
-
-      onPanResponderMove: (_, g) => {
-        setTranslateX(g.dx);
-        setRotate(g.dx / 15);
-      },
-
-      onPanResponderRelease: (_, g) => {
-        if (g.dx > 100) swipe('like');
-        else if (g.dx < -100) swipe('skip');
-        else {
-          setTranslateX(0);
-          setRotate(0);
-        }
-      },
-    })
-  ).current;
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
-      { rotate: `${rotate.value}deg` },
-    ],
-    opacity: opacity.value,
-  }));
+  const insets = useSafeAreaInsets();
 
   if (!currentCard) {
     return (
@@ -73,57 +46,65 @@ export const DiscoveryDetailScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.bgDark} />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={colors.bgDark} translucent />
 
-      <LinearGradient
-        colors={[colors.bgDark, currentCard.backgroundColor || colors.secondary]}
-        style={styles.content}
-      >
+      <View style={styles.content}>
         {/* Back */}
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={[styles.backButton, { top: insets.top + spacing.sm }]} onPress={() => navigation.goBack()}>
           <Icon name="chevron-down" size={28} color={colors.white} />
         </TouchableOpacity>
 
-        <Animated.View
-          style={[styles.cardWrapper, animatedStyle]}
-          {...panResponder.panHandlers}
-        >
-          {/* Body */}
-          <View style={styles.body}>
-            <Text style={styles.tag}>{currentCard.title.toUpperCase()}</Text>
+        {/* Header Right Actions */}
+        <View style={[styles.headerRight, { top: insets.top + spacing.sm }]}>
+          <TouchableOpacity style={styles.headerButton}>
+            <Icon name="options-outline" size={24} color={colors.white} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.headerButton}>
+            <Icon name="ellipsis-vertical" size={24} color={colors.white} />
+          </TouchableOpacity>
+        </View>
 
-            <Text style={styles.subtitle}>
-              {currentCard.subtitle}
-            </Text>
+        <View style={styles.deckContainer}>
+          {nextCard && (
+            <Animated.View style={[styles.cardAbsolute, backgroundCardStyle]}>
+              <DiscoveryCard card={nextCard} />
+            </Animated.View>
+          )}
 
-            <View style={styles.locationContainer}>
-              <Icon name="location" size={20} color={colors.neonCyan} />
-              <Text style={styles.locationText}>
-                {currentCard.distance} - {currentCard.location}
-              </Text>
-            </View>
+          <Animated.View
+            style={[styles.cardAbsolute, animatedStyle]}
+            {...panHandlers}
+          >
+            <DiscoveryCard card={currentCard} />
+            <Animated.View style={[styles.tintOverlay, tintStyle]} pointerEvents="none" />
+          </Animated.View>
+
+          <View style={[styles.fixedFooter, { bottom: insets.bottom + spacing.md }]}>
+            <Animated.View style={skipStyle}>
+              <TouchableOpacity
+                style={[styles.bigButton, styles.skip]}
+                onPress={() => swipe('skip')}
+              >
+                <Icon name="close" size={36} color={colors.neonCyan} />
+              </TouchableOpacity>
+            </Animated.View>
+
+            <Animated.View style={likeStyle}>
+              <TouchableOpacity
+                style={[styles.bigButton, styles.like]}
+                onPress={() => {
+                  swipe('like');
+                  navigation.navigate('MatchReveal');
+                }}
+              >
+                <Icon name="heart" size={36} color={colors.white} />
+              </TouchableOpacity>
+            </Animated.View>
           </View>
-
-          {/* Actions */}
-          <View style={styles.footer}>
-            <TouchableOpacity
-              style={[styles.bigButton, styles.skip]}
-              onPress={() => swipe('skip')}
-            >
-              <Icon name="close" size={36} color={colors.neonCyan} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.bigButton, styles.like]}
-              onPress={() => swipe('like')}
-            >
-              <Icon name="heart" size={36} color={colors.white} />
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
-      </LinearGradient>
-    </SafeAreaView>
+        </View>
+      </View>
+    </View>
   );
 };
 
@@ -135,65 +116,70 @@ const styles = StyleSheet.create({
 
   content: {
     flex: 1,
-    padding: spacing.lg,
-    justifyContent: 'space-between',
+    padding: 0, // Fill screen edges
   },
 
   backButton: {
+    position: 'absolute',
+    top: spacing.md,
+    left: spacing.md,
     width: 44,
     height: 44,
     borderRadius: 22,
     backgroundColor: colors.overlayLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: spacing.sm,
+    zIndex: 20, // highest zIndex
+    elevation: 10, // Ensure elevated on Android
   },
 
-  cardWrapper: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-
-  body: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-
-  tag: {
-    fontSize: 14,
-    color: colors.textOpacity60,
-    letterSpacing: 2,
-    fontWeight: 'bold',
-  },
-
-  subtitle: {
-    fontSize: 34,
-    fontWeight: '900',
-    color: colors.white,
-    textAlign: 'center',
-    lineHeight: 44,
-  },
-
-  locationContainer: {
+  headerRight: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
     flexDirection: 'row',
-    alignItems: 'center',
     gap: spacing.sm,
-    marginTop: spacing.sm,
+    zIndex: 20, // highest zIndex
+    elevation: 10, // Ensure elevated on Android
   },
 
-  locationText: {
-    fontSize: 16,
-    color: colors.neonCyan,
-    fontWeight: '600',
-  },
-
-  footer: {
-    flexDirection: 'row',
+  headerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.overlayLight,
     justifyContent: 'center',
-    gap: spacing.xl,
-    marginBottom: spacing.xl,
+    alignItems: 'center',
+  },
+
+  tintOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 5,
+  },
+
+  deckContainer: {
+    flex: 1,
+    position: 'relative',
+    marginTop: 0,
+  },
+
+  cardAbsolute: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+
+  fixedFooter: {
+    position: 'absolute',
+    bottom: spacing.lg,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.xl,
+    zIndex: 10,
   },
 
   bigButton: {
@@ -202,7 +188,11 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 6,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 5,
   },
 
   like: {
@@ -210,8 +200,7 @@ const styles = StyleSheet.create({
   },
 
   skip: {
-    borderWidth: 2,
-    borderColor: colors.neonCyan,
+    backgroundColor: colors.white,
   },
 
   emptyText: {
