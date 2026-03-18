@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { BorderInput } from '../../../../components/atoms/BorderInput';
-import { colors } from '../../../../constants/colors';
-import { spacing } from '../../../../constants/spacing';
-import { typography } from '../../../../constants/typography';
+import { colors } from '../../../../core/theme/colors';
+import { spacing } from '../../../../core/theme/spacing';
+import { typography } from '../../../../core/theme/typography';
 import { PhoneInputProps } from '../../domain/types/phone-input.types';
 
 

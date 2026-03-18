@@ -9,8 +9,8 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { colors, gradients } from '../../constants/colors';
-import { spacing } from '../../constants/spacing';
+import { colors, gradients } from '../../core/theme/colors';
+import { spacing } from '../../core/theme/spacing';
 
 
 interface CreateVibeFABProps {

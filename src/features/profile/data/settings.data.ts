@@ -1,4 +1,4 @@
-import { colors } from '../../../constants/colors';
+import { colors } from '../../../core/theme/colors';
 import {
   SettingsSection,
   SettingsToggleState,

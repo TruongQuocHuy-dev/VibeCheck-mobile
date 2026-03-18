@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, KeyboardAvo
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
-import { colors } from '../../../../constants/colors';
-import { spacing, sizes } from '../../../../constants/spacing';
-import { typography } from '../../../../constants/typography';
+import { colors } from '../../../../core/theme/colors';
+import { spacing, sizes } from '../../../../core/theme/spacing';
+import { typography } from '../../../../core/theme/typography';
 import { useProfileSetup } from '../../application/hooks/useProfileSetup';
 import { ProfileSetupScreenProps } from '../../domain/types/profile-setup.types';
 import { AvatarPicker } from '../components/AvatarPicker';

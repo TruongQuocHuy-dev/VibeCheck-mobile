@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
-import { colors } from '../../../../constants/colors';
-import { spacing, sizes } from '../../../../constants/spacing';
-import { typography } from '../../../../constants/typography';
+import { colors } from '../../../../core/theme/colors';
+import { spacing, sizes } from '../../../../core/theme/spacing';
+import { typography } from '../../../../core/theme/typography';
 import { useNavigation } from '@react-navigation/native';
 
 import { useSendOtp } from '../../application/hooks/useSendOtp';

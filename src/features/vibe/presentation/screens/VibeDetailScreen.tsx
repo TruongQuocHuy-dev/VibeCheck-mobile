@@ -12,9 +12,9 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { colors } from '../../../../constants/colors';
-import { borderRadius, spacing } from '../../../../constants/spacing';
-import { typography } from '../../../../constants/typography';
+import { colors } from '../../../../core/theme/colors';
+import { borderRadius, spacing } from '../../../../core/theme/spacing';
+import { typography } from '../../../../core/theme/typography';
 import { useVibeDetail } from '../../application/hooks/useVibeDetail';
 
 export const VibeDetailScreen: React.FC = () => {

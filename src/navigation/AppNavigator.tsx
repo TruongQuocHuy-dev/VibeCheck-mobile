@@ -9,6 +9,7 @@ import { RootStackParamList } from './types';
 import { ChatDetailScreen } from '../features/chat/presentation/screens/ChatDetailScreen';
 import { DiscoveryDetailScreen } from '../features/discovery/presentation/screens/DiscoveryDetailScreen';
 import { MatchRevealScreen } from '../features/discovery/presentation/screens/MatchRevealScreen';
+import { NotificationsScreen } from '../features/notifications/presentation/screens/NotificationsScreen';
 import { ProfileScreen } from '../features/profile/presentation/screens/ProfileScreen';
 import { SettingsScreen } from '../features/profile/presentation/screens/SettingsScreen';
 import { CreateVibeScreen } from '../features/vibe/presentation/screens/CreateVibeScreen';
@@ -53,6 +54,7 @@ export const AppNavigator = () => {
         <>
           <Stack.Screen name="Main" component={TabNavigator} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="CreateVibe" component={CreateVibeScreen} />
           <Stack.Screen name="VibeDetail" component={VibeDetailScreen} />
           <Stack.Screen name="MatchProfile" component={ProfileScreen} />

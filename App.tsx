@@ -5,29 +5,28 @@
  * @format
  */
 
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { AppNavigator } from './src/navigation/AppNavigator';
-import { StatusBar, StyleSheet, useColorScheme } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ErrorBoundary } from './src/shared/components/feedback/Error/ErrorBoundary';
+import { ToastProvider } from './src/shared/providers/ToastProvider';
+import { LoadingProvider } from './src/shared/providers/LoadingProvider';
+import { NetworkProvider } from './src/shared/providers/NetworkProvider';
 
 function App() {
-  const isDarkMode = useColorScheme() === 'dark';
-
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <NavigationContainer>
-        <AppNavigator />
-      </NavigationContainer>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <ToastProvider>
+        <LoadingProvider>
+          <NetworkProvider>
+            <NavigationContainer>
+              <AppNavigator />
+            </NavigationContainer>
+          </NetworkProvider>
+        </LoadingProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }
-
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
 
 export default App;

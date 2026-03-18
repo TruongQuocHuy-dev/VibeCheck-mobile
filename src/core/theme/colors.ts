@@ -1,4 +1,4 @@
-export const colors = {
+export const colors = Object.freeze({
   primary: '#6C63FF',
   primaryLight: '#8B85FF',
   primaryDark: '#4B44CC',
@@ -16,12 +16,12 @@ export const colors = {
   error: '#FF4757',
   blurLight: 'rgba(255, 255, 255, 0.1)',
   blurDark: 'rgba(0, 0, 0, 0.3)',
-  primaryPink: '#f20d80', // Added for Welcome/Auth screens
-  primaryPurple: '#9333ea', // Added for purple gradient layout
-  white: '#FFFFFF', // added explicitly
-  textMuted: '#64748B', // added for terms
-  neonCyan: '#00F0FF', // Added for Neon Auth Screen
-  neonPink: '#FF0099', // Added for Neon Auth Screen
+  primaryPink: '#f20d80',
+  primaryPurple: '#9333ea',
+  white: '#FFFFFF',
+  textMuted: '#64748B',
+  neonCyan: '#00F0FF',
+  neonPink: '#FF0099',
   placeholder: 'rgba(255, 255, 255, 0.3)',
   borderLight: 'rgba(255, 255, 255, 0.1)',
   iconMuted: 'rgba(255, 255, 255, 0.4)',
@@ -37,10 +37,14 @@ export const colors = {
   textOpacity80: 'rgba(255,255,255,0.8)',
   gradientDarkStart: '#1A2B2C',
   gradientDarkEnd: '#1B263B',
-} as const;
+} as const);
 
-export const gradients = {
+export type ColorKey = keyof typeof colors;
+
+export const gradients = Object.freeze({
   primary: ['#6C63FF', '#FF6B6B'],
   boost: ['#FFD700', '#FFA500'],
   reveal: ['#00D09C', '#6C63FF'],
-} as const;
+} as const);
+
+export type GradientKey = keyof typeof gradients;

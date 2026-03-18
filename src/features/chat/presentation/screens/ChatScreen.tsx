@@ -11,9 +11,10 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
-import { colors, gradients } from '../../../../constants/colors';
+import { colors, gradients } from '../../../../core/theme/colors';
 import { useChat } from '../../application/hooks/useChat';
 import { ChatItem } from '../../domain/types/chat.types';
+import { spacing, typography } from '../../../../core/theme';
 
 export const ChatScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -119,9 +120,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15, 15, 26, 0.95)', // Semi-transparent overlay
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: typography.sizes.xxl,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: colors.white,
     letterSpacing: 1,
   },
   headerActions: {

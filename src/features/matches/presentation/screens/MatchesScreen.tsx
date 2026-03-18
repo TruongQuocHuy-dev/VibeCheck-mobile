@@ -11,9 +11,9 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { PremiumPrompt } from '../../../../components/atoms/PremiumPrompt';
-import { colors } from '../../../../constants/colors';
-import { borderRadius, spacing } from '../../../../constants/spacing';
-import { typography } from '../../../../constants/typography';
+import { colors } from '../../../../core/theme/colors';
+import { borderRadius, spacing } from '../../../../core/theme/spacing';
+import { typography } from '../../../../core/theme/typography';
 import { useMatches } from '../../application/hooks/useMatches';
 import { MatchVibeStoryCard } from '../components/MatchVibeStoryCard';
 import { NewMatchItem } from '../components/NewMatchItem';
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: colors.textPrimary,
-    fontSize: typography.sizes.display,
+    fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.bold,
   },
   filterButton: {

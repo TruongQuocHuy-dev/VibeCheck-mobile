@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
-import { colors } from '../../../../constants/colors';
-import { spacing } from '../../../../constants/spacing';
+import { colors } from '../../../../core/theme/colors';
+import { spacing } from '../../../../core/theme/spacing';
 
 const { width } = Dimensions.get('window');
 

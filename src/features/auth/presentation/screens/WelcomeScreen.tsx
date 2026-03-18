@@ -9,12 +9,12 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../../navigation/types';
 import { WelcomeScreenProps } from '../../domain/types/welcome.types';
 import { ASSETS } from '../../../../assets/assets';
-import { colors } from '../../../../constants/colors';
+import { colors } from '../../../../core/theme/colors';
 
-import { spacing, sizes } from '../../../../constants/spacing';
+import { spacing, sizes } from '../../../../core/theme/spacing';
 import { GradientButton } from '../../../../components/atoms/GradientButton';
-import { typography } from '../../../../constants/typography';
-import { shadows, textShadows } from '../../../../constants/styles';
+import { typography } from '../../../../core/theme/typography';
+import { shadows, textShadows } from '../../../../core/theme/styles';
 
 import { useWelcomeAnimations } from '../../application/hooks/useWelcomeAnimations';
 

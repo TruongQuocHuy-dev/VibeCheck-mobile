@@ -14,7 +14,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { colors } from '../../../../constants/colors';
+import { colors } from '../../../../core/theme/colors';
 import { useChatDetail } from '../../application/hooks/useChatDetail';
 import { Message } from '../../domain/types/chat-detail.types';
 

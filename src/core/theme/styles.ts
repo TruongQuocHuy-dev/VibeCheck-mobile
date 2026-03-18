@@ -1,7 +1,12 @@
 import { colors } from './colors';
 
-/** Reusable shadow tokens cho VibeCheck app - NO FALLBACKS */
-export const shadows = {
+/**
+ * Reusable shadow tokens cho VibeCheck app - NO FALLBACKS
+ * 
+ * UI-specific shadow styling used across the app
+ */
+
+export const shadows = Object.freeze({
   glass: {
     shadowColor: colors.primaryPink,
     shadowOffset: { width: 0, height: 10 },
@@ -16,7 +21,7 @@ export const shadows = {
     shadowRadius: 15,
   },
   accent: {
-    shadowColor: '#000000', // Explicit black
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 5,
@@ -28,13 +33,16 @@ export const shadows = {
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
-  }
-} as const;
+  },
+} as const);
 
-export const textShadows = {
+export const textShadows = Object.freeze({
   neon: {
     textShadowColor: 'rgba(242, 13, 128, 0.5)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
-  }
-} as const;
+  },
+} as const);
+
+export type ShadowKey = keyof typeof shadows;
+export type TextShadowKey = keyof typeof textShadows;

@@ -13,9 +13,9 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '../../../../constants/colors';
-import { borderRadius, spacing } from '../../../../constants/spacing';
-import { typography } from '../../../../constants/typography';
+import { colors } from '../../../../core/theme/colors';
+import { borderRadius, spacing } from '../../../../core/theme/spacing';
+import { typography } from '../../../../core/theme/typography';
 import { useCreateVibe } from '../../application/hooks/useCreateVibe';
 import { MusicOptionCard } from '../components/MusicOptionCard';
 

@@ -13,8 +13,8 @@ import Animated from 'react-native-reanimated';
 
 import { useDiscoveryDetail } from '../../application/hooks/useDiscoveryDetail';
 import { DiscoveryCard } from '../components/DiscoveryCard';
-import { colors } from '../../../../constants/colors';
-import { spacing } from '../../../../constants/spacing';
+import { colors } from '../../../../core/theme/colors';
+import { spacing } from '../../../../core/theme/spacing';
 
 export const DiscoveryDetailScreen: React.FC = () => {
   const route = useRoute<any>();

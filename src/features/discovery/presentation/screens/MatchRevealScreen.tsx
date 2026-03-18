@@ -16,8 +16,8 @@ import Animated from 'react-native-reanimated';
 import { useMatchReveal } from '../../application/hooks/useMatchReveal';
 import { MatchActions } from '../components/MatchActions';
 import { mockMatchInfo } from '../../data/match.data';
-import { colors } from '../../../../constants/colors';
-import { spacing } from '../../../../constants/spacing';
+import { colors } from '../../../../core/theme/colors';
+import { spacing } from '../../../../core/theme/spacing';
 
 const { width, height } = Dimensions.get('window');
 

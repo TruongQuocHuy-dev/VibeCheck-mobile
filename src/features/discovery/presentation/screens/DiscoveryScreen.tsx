@@ -14,8 +14,9 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useDiscovery } from '../../application/hooks/useDiscovery';
 import { VibeCard } from '../../domain/types/vibe-card.types';
-import { spacing } from '../../../../constants/spacing';
-import { colors } from '../../../../constants/colors';
+import { spacing } from '../../../../core/theme/spacing';
+import { colors } from '../../../../core/theme/colors';
+import { typography } from '../../../../core/theme';
 
 const { width, height } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.85;
@@ -84,12 +85,17 @@ export const DiscoveryScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTitleContainer}>
-          <Icon name="compass-outline" size={24} color={colors.neonCyan} />
-          <Text style={styles.headerTitle}>RADAR <Text style={styles.headerSubtitle}>GẦN ĐÂY</Text></Text>
+          <Text style={styles.headerTitle}>VIBECHECK<Text style={styles.headerSubtitle}></Text></Text>
         </View>
-        <TouchableOpacity style={styles.menuButton}>
-          <Icon name="options-outline" size={20} color={colors.white} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.notificationButton} onPress={() => navigation.navigate('Notifications')}>
+            <Icon name="notifications-outline" size={20} color={colors.white} />
+            <View style={styles.notificationBadge} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.menuButton}>
+            <Icon name="options-outline" size={20} color={colors.white} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Single Card View */}
@@ -125,13 +131,37 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: typography.sizes.xxl,
     fontWeight: 'bold',
     color: colors.neonCyan,
     letterSpacing: 0.5,
   },
   headerSubtitle: {
     color: colors.white,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  notificationButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.overlayLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.overlayBorder,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.error,
   },
   menuButton: {
     width: 36,

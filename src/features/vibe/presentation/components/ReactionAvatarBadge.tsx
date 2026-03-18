@@ -1,8 +1,8 @@
 import React, { memo } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { colors } from '../../../../constants/colors';
-import { borderRadius, spacing } from '../../../../constants/spacing';
+import { colors } from '../../../../core/theme/colors';
+import { borderRadius, spacing } from '../../../../core/theme/spacing';
 import { VibeReactionUser } from '../../domain/types/vibe-detail.types';
 
 interface ReactionAvatarBadgeProps {

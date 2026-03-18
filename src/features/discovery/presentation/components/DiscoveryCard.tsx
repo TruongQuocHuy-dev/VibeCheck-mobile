@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, Dimensions } from 'react-native';
-import { colors } from '../../../../constants/colors';
-import { spacing } from '../../../../constants/spacing';
+import { colors } from '../../../../core/theme/colors';
+import { spacing } from '../../../../core/theme/spacing';
 import { VibeCard } from '../../domain/types/vibe-card.types';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');

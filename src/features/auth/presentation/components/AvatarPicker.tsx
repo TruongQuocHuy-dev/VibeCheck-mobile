@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, TouchableOpacity, Image, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { colors } from '../../../../constants/colors';
-import { spacing } from '../../../../constants/spacing';
-import { typography } from '../../../../constants/typography';
+import { colors } from '../../../../core/theme/colors';
+import { spacing } from '../../../../core/theme/spacing';
+import { typography } from '../../../../core/theme/typography';
 import { AvatarPickerProps } from '../../domain/types/avatar-picker.types';
 
 /**

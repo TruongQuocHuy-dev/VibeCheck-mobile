@@ -7,9 +7,9 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import { colors } from '../../../../constants/colors';
-import { borderRadius, spacing } from '../../../../constants/spacing';
-import { typography } from '../../../../constants/typography';
+import { colors } from '../../../../core/theme/colors';
+import { borderRadius, spacing } from '../../../../core/theme/spacing';
+import { typography } from '../../../../core/theme/typography';
 import { PastVibeItem } from '../../domain/types/profile.types';
 
 interface PastVibeCardProps {

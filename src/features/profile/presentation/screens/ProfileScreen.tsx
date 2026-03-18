@@ -13,9 +13,9 @@ import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { PremiumPrompt } from '../../../../components/atoms/PremiumPrompt';
-import { colors } from '../../../../constants/colors';
-import { borderRadius, spacing } from '../../../../constants/spacing';
-import { typography } from '../../../../constants/typography';
+import { colors } from '../../../../core/theme/colors';
+import { borderRadius, spacing } from '../../../../core/theme/spacing';
+import { typography } from '../../../../core/theme/typography';
 import { useProfile } from '../../application/hooks/useProfile';
 import { PastVibeCard } from '../components/PastVibeCard';
 import { ProfileStatItem } from '../components/ProfileStatItem';
@@ -64,7 +64,7 @@ export const ProfileScreen: React.FC = () => {
               </TouchableOpacity>
             ) : (
               <TouchableOpacity style={styles.messageButton} activeOpacity={0.9} onPress={handleMessagePress}>
-                <Icon name="chatbubble-ellipses" size={spacing.md_sm} color={colors.bgDark} />
+                <Icon name="chatbubble-ellipses" size={spacing.md} color={colors.white} />
               </TouchableOpacity>
             )}
           </View>
@@ -222,12 +222,13 @@ const styles = StyleSheet.create({
   },
   messageButton: {
     minHeight: spacing.xl + spacing.sm,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.neonCyan,
     paddingHorizontal: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.bgTooltip,
+    borderColor: colors.overlayBorder,
     gap: spacing.xs,
   },
   profileSection: {

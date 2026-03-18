@@ -1,8 +1,8 @@
 import React, { memo } from 'react';
 import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
-import { colors } from '../../../../constants/colors';
-import { spacing, borderRadius } from '../../../../constants/spacing';
-import { typography } from '../../../../constants/typography';
+import { colors } from '../../../../core/theme/colors';
+import { spacing, borderRadius } from '../../../../core/theme/spacing';
+import { typography } from '../../../../core/theme/typography';
 import { UserStat } from '../../domain/types/profile.types';
 
 interface ProfileStatItemProps {

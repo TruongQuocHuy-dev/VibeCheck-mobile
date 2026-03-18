@@ -7,6 +7,7 @@ export type RootStackParamList = {
   VibePicker: undefined;
   Main: undefined;
   Settings: undefined;
+  Notifications: undefined;
   CreateVibe: undefined;
   VibeDetail: {
     photoUrl?: string;

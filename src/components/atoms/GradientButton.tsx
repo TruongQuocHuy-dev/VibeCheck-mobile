@@ -2,9 +2,9 @@ import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { colors } from '../../constants/colors';
-import { spacing } from '../../constants/spacing';
-import { typography } from '../../constants/typography';
+import { colors } from '../../core/theme/colors';
+import { spacing } from '../../core/theme/spacing';
+import { typography } from '../../core/theme/typography';
 import { GradientButtonProps } from '../../types/gradient-button.types';
 
 

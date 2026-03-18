@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { colors } from '../../../../constants/colors';
-import { spacing } from '../../../../constants/spacing';
+import { colors } from '../../../../core/theme/colors';
+import { spacing } from '../../../../core/theme/spacing';
 
 export interface MatchActionsProps {
   onChatPress: () => void;

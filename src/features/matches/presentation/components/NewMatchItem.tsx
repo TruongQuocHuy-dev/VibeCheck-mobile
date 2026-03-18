@@ -1,8 +1,8 @@
 import React, { memo } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../../../../constants/colors';
-import { borderRadius, spacing } from '../../../../constants/spacing';
-import { typography } from '../../../../constants/typography';
+import { colors } from '../../../../core/theme/colors';
+import { borderRadius, spacing } from '../../../../core/theme/spacing';
+import { typography } from '../../../../core/theme/typography';
 import { NewMatchUser } from '../../domain/types/matches.types';
 
 interface NewMatchItemProps {
