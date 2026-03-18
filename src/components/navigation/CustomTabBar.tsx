@@ -1,16 +1,16 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Text, Dimensions } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { colors } from '../../constants/colors';
 
-const { width } = Dimensions.get('window');
-
 export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
   const insets = useSafeAreaInsets();
-  const focusedOptions = descriptors[state.routes[state.index].key].options;
 
+  const handleCreateVibePress = () => {
+    navigation.getParent()?.navigate('CreateVibe' as never);
+  };
 
   const renderTab = (route: typeof state.routes[0], index: number) => {
     const { options } = descriptors[route.key];
@@ -81,15 +81,10 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom + 10, height: 70 + insets.bottom }]}>
       {firstHalf.map((route, index) => renderTab(route, index))}
-      
-      {/* FAB Center Button */}
-      <TouchableOpacity 
+
+      <TouchableOpacity
         style={styles.fabButton}
-        onPress={() => {
-          // Action for creating Vibe
-          console.log('Create Vibe pressed');
-          // navigation.navigate('CreateVibe'); // Optional, if screen exists
-        }}
+        onPress={handleCreateVibePress}
       >
         <Icon name="add" size={32} color="#FFFFFF" />
       </TouchableOpacity>
@@ -137,7 +132,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary || '#6C63FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: -30, // Raise above bottom bar
+    marginTop: -30,
     shadowColor: colors.primary || '#6C63FF',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

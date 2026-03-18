@@ -9,6 +9,10 @@ import { RootStackParamList } from './types';
 import { ChatDetailScreen } from '../features/chat/presentation/screens/ChatDetailScreen';
 import { DiscoveryDetailScreen } from '../features/discovery/presentation/screens/DiscoveryDetailScreen';
 import { MatchRevealScreen } from '../features/discovery/presentation/screens/MatchRevealScreen';
+import { ProfileScreen } from '../features/profile/presentation/screens/ProfileScreen';
+import { SettingsScreen } from '../features/profile/presentation/screens/SettingsScreen';
+import { CreateVibeScreen } from '../features/vibe/presentation/screens/CreateVibeScreen';
+import { VibeDetailScreen } from '../features/vibe/presentation/screens/VibeDetailScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -48,6 +52,10 @@ export const AppNavigator = () => {
       ) : (
         <>
           <Stack.Screen name="Main" component={TabNavigator} />
+          <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="CreateVibe" component={CreateVibeScreen} />
+          <Stack.Screen name="VibeDetail" component={VibeDetailScreen} />
+          <Stack.Screen name="MatchProfile" component={ProfileScreen} />
           <Stack.Screen name="ChatDetail" component={ChatDetailScreen} />
           <Stack.Screen name="DiscoveryDetail" component={DiscoveryDetailScreen} />
           <Stack.Screen name="MatchReveal" component={MatchRevealScreen} />

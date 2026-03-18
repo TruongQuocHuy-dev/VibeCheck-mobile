@@ -6,6 +6,26 @@ export type RootStackParamList = {
   ProfileSetup: undefined;
   VibePicker: undefined;
   Main: undefined;
+  Settings: undefined;
+  CreateVibe: undefined;
+  VibeDetail: {
+    photoUrl?: string;
+    caption?: string;
+    location?: string;
+    durationLabel?: string;
+    trackTitle?: string;
+    trackArtist?: string;
+    ownerName?: string;
+    ownerAvatar?: string;
+    fromMatchStory?: boolean;
+  } | undefined;
+  MatchProfile: {
+    id: string;
+    name: string;
+    age: number;
+    avatar: string;
+    isOnline?: boolean;
+  };
   ChatDetail: { chatId: string; name: string; avatar: string; isOnline: boolean };
   DiscoveryDetail: { cards: VibeCard[]; initialIndex: number };
   MatchReveal: undefined;
