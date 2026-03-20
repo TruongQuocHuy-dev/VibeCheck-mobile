@@ -1,10 +1,12 @@
-import { useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../../navigation/types';
 import { profileMockData } from '../../data/profile.data';
 import { UserProfile } from '../../domain/types/profile.types';
 import { getMatchProfileDetail } from '../../../matches/data/match-profile.data';
+import apiClient from '../../../../infrastructure/api/axios';
+import { ENDPOINTS } from '../../../../infrastructure/api/endpoints';
 
 type ProfileNavigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -12,44 +14,91 @@ export const useProfile = () => {
   const navigation = useNavigation<ProfileNavigation>();
   const route = useRoute();
 
+  const [ownProfileData, setOwnProfileData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
   const matchParams = (route.params || {}) as Partial<RootStackParamList['MatchProfile']>;
   const isMatchProfile = Boolean(matchParams.id && matchParams.name && matchParams.avatar);
   const isOwnProfile = !isMatchProfile;
 
+  const fetchProfile = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res: any = await apiClient.get(ENDPOINTS.USER.GET_PROFILE);
+      setOwnProfileData(res?.user || res); // safely unwrap
+    } catch (err) {
+      console.log('Error fetching profile:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOwnProfile) {
+      const unsubscribe = navigation.addListener('focus', fetchProfile);
+      fetchProfile(); // initial fetch
+      return unsubscribe;
+    }
+  }, [isOwnProfile, navigation, fetchProfile]);
+
   const profile = useMemo<UserProfile>(() => {
-    if (!isMatchProfile) {
-      return profileMockData;
+    if (isMatchProfile) {
+      const matchDetail = getMatchProfileDetail(matchParams.id as string);
+      const displayName = (matchParams.name as string) || 'User';
+
+      return {
+        id: matchParams.id as string,
+        username: `@${displayName}`,
+        handle: displayName.toLowerCase().replace(/\s+/g, '.'),
+        avatar: matchParams.avatar as string,
+        isVerified: false,
+        stats: [
+          { id: 'stats-distance', label: 'Distance', value: matchDetail.distanceKm },
+          { id: 'stats-vibes', label: 'Vibes', value: matchDetail.recentVibePhotos.length },
+          { id: 'stats-likes', label: 'Likes', value: 0 },
+          { id: 'stats-common', label: 'Common', value: matchDetail.interests.length },
+        ],
+        currentVibe: {
+          id: `${matchDetail.id}-current-vibe`,
+          text: matchDetail.bio,
+          expiresIn: 'Con 12h',
+          backgroundImage: matchDetail.recentVibePhotos[0] || profileMockData.currentVibe?.backgroundImage || '',
+        },
+        premiumPlan: profileMockData.premiumPlan,
+        pastVibes: matchDetail.recentVibePhotos.map((image, index) => ({
+          id: `${matchDetail.id}-photo-${index}`,
+          image,
+          statusLabel: 'Dang hoat dong',
+        })),
+      };
     }
 
-    const matchDetail = getMatchProfileDetail(matchParams.id as string);
-    const displayName = (matchParams.name as string) || 'User';
+    // fallback mapping for own profile
+    if (!ownProfileData) return profileMockData; // render mock while loading or on failure
+
+    const vibes = ownProfileData.vibes || [];
+    const displayName = ownProfileData.displayName || 'Người dùng';
+    const avatar = ownProfileData.avatar || profileMockData.avatar;
+    const bio = ownProfileData.bio || 'Sẵn sàng kết nối';
 
     return {
-      id: matchParams.id as string,
+      ...profileMockData, // keep plans/pastvibes framework fallback
+      id: ownProfileData._id || ownProfileData.id || profileMockData.id,
       username: `@${displayName}`,
-      handle: displayName.toLowerCase().replace(/\s+/g, '.'),
-      avatar: matchParams.avatar as string,
-      isVerified: false,
-      stats: [
-        { id: 'stats-distance', label: 'Distance', value: matchDetail.distanceKm },
-        { id: 'stats-vibes', label: 'Vibes', value: matchDetail.recentVibePhotos.length },
-        { id: 'stats-likes', label: 'Likes', value: 0 },
-        { id: 'stats-common', label: 'Common', value: matchDetail.interests.length },
-      ],
+      handle: ownProfileData.phone || profileMockData.handle,
+      avatar,
       currentVibe: {
-        id: `${matchDetail.id}-current-vibe`,
-        text: matchDetail.bio,
-        expiresIn: 'Con 12h',
-        backgroundImage: matchDetail.recentVibePhotos[0] || profileMockData.currentVibe?.backgroundImage || '',
+        id: 'current',
+        text: bio,
+        expiresIn: 'Mới cập nhật',
+        backgroundImage: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=600',
       },
-      premiumPlan: profileMockData.premiumPlan,
-      pastVibes: matchDetail.recentVibePhotos.map((image, index) => ({
-        id: `${matchDetail.id}-photo-${index}`,
-        image,
-        statusLabel: 'Dang hoat dong',
-      })),
+      stats: [
+        { id: 'stats-vibes', label: 'Vibes', value: vibes.length },
+        ...profileMockData.stats.slice(1) // fallback likes methods
+      ]
     };
-  }, [isMatchProfile, matchParams.avatar, matchParams.id, matchParams.name]);
+  }, [isMatchProfile, matchParams, ownProfileData]);
 
   const hasStats = profile.stats.length > 0;
   const hasPastVibes = profile.pastVibes.length > 0;
@@ -101,7 +150,9 @@ export const useProfile = () => {
 
   return {
     profile,
+    loading,
     isOwnProfile,
+    ownProfileData,
     hasStats,
     hasPastVibes,
     statsTotal,

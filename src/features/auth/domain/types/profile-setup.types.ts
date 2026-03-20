@@ -26,6 +26,8 @@ export interface UseProfileSetupReturn {
   handlePickAvatar: () => void;
   /** Submit profile completion trigger */
   handleSubmit: () => void;
+  /** Separate field-level error messages for real-time feedback */
+  errors: { nickname?: string; birthYear?: string };
   /** Error message if validation or submit fails */
   error: string | null;
   /** Loading state during submit */

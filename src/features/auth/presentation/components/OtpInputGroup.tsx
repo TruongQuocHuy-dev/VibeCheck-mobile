@@ -6,15 +6,27 @@ import { typography } from '../../../../core/theme/typography';
 import { OtpInputGroupProps } from '../../domain/types/otp-input.types';
 
 
+import { TextInput } from 'react-native';
+
 /**
  * Reusable Molecule component rendering a Row of OTP slots highlighted.
  */
 export const OtpInputGroup: React.FC<OtpInputGroupProps> = ({
   otp,
+  setOtp,
   length = 4,
 }) => {
   return (
     <View style={styles.otpContainer}>
+      <TextInput
+        value={otp}
+        onChangeText={setOtp}
+        maxLength={length}
+        keyboardType="number-pad"
+        style={styles.hiddenInput}
+        caretHidden={true}
+        autoFocus={true} // Automatically pop up native keyboard
+      />
       {Array.from({ length }).map((_, index) => (
         <View 
           key={index} 
@@ -34,6 +46,11 @@ export const OtpInputGroup: React.FC<OtpInputGroupProps> = ({
 };
 
 const styles = StyleSheet.create({
+  hiddenInput: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0,
+    zIndex: 10,
+  },
   otpContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -42,9 +59,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   otpSlot: {
-    width: 60,
-    height: 70,
-    borderRadius: 16,
+    width: 48,
+    height: 60,
+    borderRadius: 12,
     backgroundColor: colors.blurLight,
     borderWidth: 1,
     borderColor: colors.borderLight,

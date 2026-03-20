@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { AuthService } from '../../infrastructure/services/auth.service';
+import { AuthApiService } from '../../../../infrastructure/services/auth.api.service';
+import { saveTokens, saveUser } from '../../../../infrastructure/storage/AsyncStorage';
 import { passwordSchema } from '../../domain/validators/otp.validator';
 
 /**
- * Use case hook for password login authentication.
+ * Use case: login with phone + password for returning users.
  */
-export const useLoginPassword = (onSuccess: () => void) => {
+export const useLoginPassword = (onSuccess: (result: any) => void) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -13,11 +14,15 @@ export const useLoginPassword = (onSuccess: () => void) => {
     setLoading(true);
     setError(null);
     try {
-      passwordSchema.parse(password); // Validation
-      const { token } = await AuthService.login(phone, password);
-      if (token) {
-        onSuccess();
-      }
+      passwordSchema.parse(password);
+      const result = await AuthApiService.login(phone, password);
+      await saveTokens(result.accessToken, result.refreshToken);
+      await saveUser({
+        ...result.user,
+        hasPassword: true, // Login implies password exists
+        isProfileComplete: result.isProfileComplete,
+      });
+      onSuccess(result);
     } catch (err: any) {
       setError(err.errors?.[0]?.message || err.message || 'Sai thông tin đăng nhập');
     } finally {

@@ -80,3 +80,5 @@ Rule_Gencode_CleanArchitecture.md
 # Environment
 .env
 .env.*
+
+google-services.json

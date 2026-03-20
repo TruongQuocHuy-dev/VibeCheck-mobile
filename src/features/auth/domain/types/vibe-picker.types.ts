@@ -1,5 +1,6 @@
 export interface VibeTag {
-  id: string;
+  id?: string;
+  _id?: string;
   label: string;
   emoji: string;
   colorType: 'cyan' | 'pink';

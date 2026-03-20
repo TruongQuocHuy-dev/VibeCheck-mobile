@@ -10,7 +10,7 @@ const { width } = Dimensions.get('window');
 
 import { VibePickerScreenProps, VibeTag as VibeTagType } from '../../domain/types/vibe-picker.types';
 import { useVibePicker } from '../../application/hooks/useVibePicker';
-import { VIBE_TAGS } from '../../data/vibe.data';
+import { ActivityIndicator } from 'react-native';
 
 // Local Sub-Component: VibeHeader
 const VibeHeader: React.FC<{ onBack: () => void }> = ({ onBack }) => {
@@ -41,7 +41,7 @@ const VibeTagItem: React.FC<{ tag: VibeTagType; isSelected: boolean; onToggle: (
   const tagStyle = isSelected ? (isCyan ? styles.tagSelectedCyan : styles.tagSelectedPink) : styles.tagNormal;
 
   return (
-    <TouchableOpacity onPress={() => onToggle(tag.id)} activeOpacity={0.8} style={[styles.tagBase, tagStyle]}>
+    <TouchableOpacity onPress={() => onToggle((tag._id || tag.id)!)} activeOpacity={0.8} style={[styles.tagBase, tagStyle]}>
       <Text style={[styles.emoji, !isSelected && styles.emojiNormal]}>{tag.emoji}</Text>
       <Text style={[styles.tagText, isSelected && styles.tagTextSelected]}>{tag.label}</Text>
     </TouchableOpacity>
@@ -49,7 +49,7 @@ const VibeTagItem: React.FC<{ tag: VibeTagType; isSelected: boolean; onToggle: (
 };
 
 export const VibePickerScreen: React.FC<VibePickerScreenProps> = ({ onComplete, onBack }) => {
-  const { selectedIds, toggleSelection, handleReset, isValid, handleSubmit } = useVibePicker(onComplete);
+  const { vibes, selectedIds, toggleSelection, handleReset, isValid, handleSubmit, loading } = useVibePicker(onComplete);
   const insets = useSafeAreaInsets();
 
   return (
@@ -61,16 +61,22 @@ export const VibePickerScreen: React.FC<VibePickerScreenProps> = ({ onComplete, 
       <VibeHeader onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.tagsWrapper}>
-          {VIBE_TAGS.map((tag) => (
-            <VibeTagItem 
-              key={tag.id}
-              tag={tag}
-              isSelected={selectedIds.includes(tag.id)}
-              onToggle={toggleSelection}
-            />
-          ))}
-        </View>
+        {loading ? (
+          <View style={styles.statusWrapper}>
+             <ActivityIndicator size="large" color={colors.neonCyan} />
+          </View>
+        ) : (
+          <View style={styles.tagsWrapper}>
+            {vibes.map((tag) => (
+              <VibeTagItem 
+                key={tag._id || tag.id}
+                tag={tag}
+                isSelected={selectedIds.includes((tag._id || tag.id)!)}
+                onToggle={toggleSelection}
+              />
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       <View style={[styles.bottomSection, { paddingBottom: insets.bottom > 0 ? insets.bottom : spacing.lg }]}>

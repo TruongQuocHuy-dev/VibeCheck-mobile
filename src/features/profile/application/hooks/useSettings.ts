@@ -42,7 +42,8 @@ export const useSettings = () => {
         console.log('Delete account pressed');
         break;
       case 'logout':
-        console.log('Logout pressed');
+        const { DeviceEventEmitter } = require('react-native');
+        DeviceEventEmitter.emit('logout');
         break;
       default:
         console.log(`Pressed: ${item.id}`);

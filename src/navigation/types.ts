@@ -3,6 +3,7 @@ import { VibeCard } from '../features/discovery/domain/types/vibe-card.types';
 export type RootStackParamList = {
   Welcome: undefined;
   OtpScreen: undefined;
+  CreatePassword: undefined;
   ProfileSetup: undefined;
   VibePicker: undefined;
   Main: undefined;

@@ -8,18 +8,20 @@
  * 📝 Then use: import Config from 'react-native-config';
  */
 
-// API Configuration
-// TODO: Implement with react-native-config for proper environment management
-export const API_BASE_URL = __DEV__ 
-  ? 'https://api.dev.vibecheck.local'
-  : 'https://api.vibecheck.local';
+// @ts-ignore
+import { API_BASE_URL, GOOGLE_WEB_CLIENT_ID } from '@env';
 
 export const APP_CONFIG = Object.freeze({
   isDev: __DEV__,
   apiBaseUrl: API_BASE_URL,
   appName: 'VibeCheck',
   appVersion: '1.0.0',
-  timeout: 30000, // 30 seconds
+  timeout: 30000,
+  /**
+   * 🔑 GOOGLE_WEB_CLIENT_ID
+   * Managed via .env variable GOOGLE_WEB_CLIENT_ID
+   */
+  googleWebClientId: GOOGLE_WEB_CLIENT_ID || 'PENDING_DOTENV_LOAD',
 } as const);
 
 export type AppConfig = typeof APP_CONFIG;

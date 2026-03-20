@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Linking, Alert, DeviceEventEmitter } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -7,9 +7,14 @@ import Animated from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../../navigation/types';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import apiClient from '../../../../infrastructure/api/axios';
+import { ENDPOINTS } from '../../../../infrastructure/api/endpoints';
+import { saveTokens, saveUser } from '../../../../infrastructure/storage/AsyncStorage';
 import { WelcomeScreenProps } from '../../domain/types/welcome.types';
 import { ASSETS } from '../../../../assets/assets';
 import { colors } from '../../../../core/theme/colors';
+import { APP_CONFIG } from '../../../../core/config/app.config';
 
 import { spacing, sizes } from '../../../../core/theme/spacing';
 import { GradientButton } from '../../../../components/atoms/GradientButton';
@@ -24,8 +29,58 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLoginSuccess }) 
   const { floatingStyle, pulsingStyle } = useWelcomeAnimations();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
+  React.useEffect(() => {
+    // Configure Google Sign-In with fallback to prevent crash
+    const clientId = APP_CONFIG.googleWebClientId;
+    const isPlaceholder = clientId === 'YOUR_GOOGLE_WEB_CLIENT_ID_HERE';
+
+    GoogleSignin.configure({
+      webClientId: isPlaceholder ? undefined : clientId,
+      offlineAccess: !isPlaceholder, // offlineAccess requires webClientId on Android
+    });
+  }, []);
+
   const handlePhoneLogin = () => {
     navigation.navigate('OtpScreen');
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.data?.idToken;
+
+      if (!idToken) {
+        throw new Error('Không lấy được Google ID Token. Vui lòng thử lại.');
+      }
+
+      // 1. Send ID Token to Backend
+      const res: any = await apiClient.post(ENDPOINTS.AUTH.GOOGLE_LOGIN, { idToken });
+      
+      const { accessToken, refreshToken, user } = res;
+      
+      if (!accessToken || !user) {
+        throw new Error('Phản hồi từ server thiếu thông tin.');
+      }
+
+      // 2. Save tokens and user to storage
+      await saveTokens(accessToken, refreshToken);
+      await saveUser(user);
+
+      // 3. Notify AppNavigator to rehydrate with direct profile check
+      DeviceEventEmitter.emit('login_success_reauth');
+
+    } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        // user cancelled the login flow
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        // operation (e.g. sign in) is in progress already
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert('Lỗi', 'Google Play Services không khả dụng.');
+      } else {
+        Alert.alert('Lỗi', error.message || 'Có lỗi xảy ra khi Đăng nhập Google.');
+      }
+    }
   };
 
   return (
@@ -85,6 +140,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLoginSuccess }) 
           <TouchableOpacity
             style={styles.secondaryButton}
             activeOpacity={0.8}
+            onPress={handleGoogleLogin}
             accessibilityLabel="Tiếp tục với Google"
             accessibilityRole="button"
           >

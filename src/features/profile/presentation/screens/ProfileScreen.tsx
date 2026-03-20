@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  ActivityIndicator,
   Image,
   ImageBackground,
   ScrollView,
@@ -26,7 +27,9 @@ export const ProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const {
     profile,
+    loading,
     isOwnProfile,
+    ownProfileData,
     hasStats,
     hasPastVibes,
     handleSettingsPress,
@@ -37,6 +40,17 @@ export const ProfileScreen: React.FC = () => {
   } = useProfile();
 
   const contentBottomPadding = insets.bottom + spacing.xxl + spacing.xl;
+
+  if (isOwnProfile && loading && !ownProfileData) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={colors.bgDark} />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>

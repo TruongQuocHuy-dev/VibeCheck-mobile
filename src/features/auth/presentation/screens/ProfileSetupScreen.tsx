@@ -11,63 +11,73 @@ import { ProfileSetupScreenProps } from '../../domain/types/profile-setup.types'
 import { AvatarPicker } from '../components/AvatarPicker';
 import { BorderInput } from '../../../../components/atoms/BorderInput';
 import { GradientButton } from '../../../../components/atoms/GradientButton';
+import { useLoading } from '../../../../shared/hooks/useLoading';
+import { useToast } from '../../../../shared/hooks/useToast';
 
 
 /**
  * Screen atom responsible for rendering the Profile Creation workflows.
  */
 export const ProfileSetupScreen: React.FC<ProfileSetupScreenProps> = ({ onComplete }) => {
-  const [nickname, setNickname] = React.useState('');
-  const [birthYear, setBirthYear] = React.useState('');
-  const [avatarUri, setAvatarUri] = React.useState<string | undefined>(undefined);
+  const {
+    nickname, setNickname,
+    birthYear, setBirthYear,
+    avatarUri, handlePickAvatar,
+    handleSubmit, errors, loading, error
+  } = useProfileSetup(onComplete);
 
-  const handlePickAvatar = () => {
-    // Mock Avatar Picker
-    setAvatarUri('https://avatar.iran.liara.run/public/boy');
-  };
+  const { showLoading, hideLoading } = useLoading();
+  const { showToast } = useToast();
 
-  const handleSubmit = () => {
-    if (onComplete) onComplete();
-  };
+  React.useEffect(() => {
+    if (loading) {
+      showLoading('Đang lưu hồ sơ...');
+    } else {
+      hideLoading();
+    }
+  }, [loading, showLoading, hideLoading]);
 
-  const loading = false;
-  const error = null;
+  React.useEffect(() => {
+    if (error) {
+      showToast(error, 'error');
+    }
+  }, [error, showToast]);
 
   const isFormValid = nickname.trim().length > 0 && birthYear.length === 4;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.backButton}
               accessibilityRole="button"
               accessibilityLabel="Quay lại"
             >
               <Icon name="arrow-left" size={24} color="rgba(255,255,255,0.6)" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Tạo Vibe của bạn</Text>
-            
-            <View style={styles.stepIndicator}>
-              <View style={styles.stepDotActive} />
-              <View style={styles.stepDot} />
-              <View style={styles.stepDot} />
-            </View>
+            <Text style={styles.headerTitle}>Tạo Vibe</Text>
+
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={!isFormValid || loading}
+              style={styles.headerNext}
+            >
+              <Text style={[styles.nextText, (!isFormValid || loading) && styles.nextTextDisabled]}>Bắt đầu</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Avatar Section */}
-          <AvatarPicker 
-            avatarUri={avatarUri} 
-            onPickAvatar={handlePickAvatar} 
-            testID="profile-setup-avatar-picker" 
+          <AvatarPicker
+            avatarUri={avatarUri}
+            onPickAvatar={handlePickAvatar}
+            testID="profile-setup-avatar-picker"
           />
-
-
 
           {/* Inputs Section */}
           <View style={styles.inputsSection}>
@@ -80,6 +90,7 @@ export const ProfileSetupScreen: React.FC<ProfileSetupScreenProps> = ({ onComple
                 iconName="at"
                 testID="profile-setup-nickname-input"
               />
+              {errors.nickname && <Text style={styles.errorFieldText}>{errors.nickname}</Text>}
             </View>
 
             <View style={styles.inputGroup}>
@@ -93,24 +104,15 @@ export const ProfileSetupScreen: React.FC<ProfileSetupScreenProps> = ({ onComple
                 maxLength={4}
                 testID="profile-setup-year-input"
               />
+              {errors.birthYear && <Text style={styles.errorFieldText}>{errors.birthYear}</Text>}
             </View>
-            
-            {error && (
-              <Text style={styles.errorText}>{error}</Text>
-            )}
+
+
           </View>
 
 
           {/* Submit Section */}
           <View style={styles.submitSection}>
-            <GradientButton
-              title={loading ? "Đang xử lý..." : "Bắt đầu quẹt Vibe ⚡"}
-              onPress={handleSubmit}
-              disabled={!isFormValid || loading}
-              testID="profile-setup-submit-button"
-            />
-
-            
             <Text style={styles.footerInfo}>
               Thông tin của bạn được bảo vệ bởi VibeCheck Protocol v2.0
             </Text>
@@ -137,19 +139,20 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    position: 'relative',
-  },
-  backButton: {
-    position: 'absolute',
-    left: 0,
-    top: spacing.lg,
-    padding: spacing.xs,
   },
   headerTitle: {
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
     color: colors.textPrimary,
+  },
+  headerNext: { paddingHorizontal: spacing.sm, paddingVertical: 8 },
+  nextText: { color: colors.neonCyan || '#00F0FF', fontSize: 16, fontWeight: typography.weights.bold },
+  nextTextDisabled: { color: colors.textSecondary, opacity: 0.5 },
+  backButton: {
+    padding: spacing.xs,
   },
   stepIndicator: {
     flexDirection: 'row',
@@ -199,6 +202,12 @@ const styles = StyleSheet.create({
     color: '#FF4D4D',
     fontSize: 12,
     marginTop: 4,
+    marginLeft: 4,
+  },
+  errorFieldText: {
+    color: '#FF4D4D',
+    fontSize: 11,
+    marginTop: 2,
     marginLeft: 4,
   },
 });

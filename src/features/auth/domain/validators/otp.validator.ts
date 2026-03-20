@@ -11,7 +11,7 @@ export const phoneSchema = z
 
 export const otpSchema = z
   .string()
-  .length(4, 'Mã OTP phải gồm 4 chữ số');
+  .length(6, 'Mã OTP phải gồm 6 chữ số');
 
 export const passwordSchema = z
   .string()

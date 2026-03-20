@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, TextInput, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import React, { useState } from 'react';
+import { View, TextInput, StyleSheet, ViewStyle, TextStyle, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../../core/theme/colors';
 import { spacing } from '../../core/theme/spacing';
@@ -23,6 +23,8 @@ export const BorderInput: React.FC<BorderInputProps> = ({
   testID,
   editable = true,
 }) => {
+  const [isSecure, setIsSecure] = useState(secureTextEntry);
+
   return (
     <View style={[styles.gradientWrapper, style]}>
       <View style={styles.inputInner}>
@@ -35,14 +37,23 @@ export const BorderInput: React.FC<BorderInputProps> = ({
           placeholderTextColor={colors.placeholder}
           value={value}
           onChangeText={onChangeText}
-          secureTextEntry={secureTextEntry}
-          keyboardType={keyboardType}
+          secureTextEntry={isSecure}
+          keyboardType={secureTextEntry && !isSecure ? 'visible-password' : keyboardType}
+          autoCorrect={false}
           maxLength={maxLength}
           autoCapitalize="none"
           testID={testID}
           editable={editable}
         />
-
+        {secureTextEntry && (
+          <TouchableOpacity onPress={() => setIsSecure(!isSecure)} style={{ padding: spacing.xs }}>
+            <Icon
+              name={isSecure ? 'eye-outline' : 'eye-off-outline'}
+              size={22}
+              color={colors.iconMuted}
+            />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
