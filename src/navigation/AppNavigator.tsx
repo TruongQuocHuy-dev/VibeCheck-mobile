@@ -15,6 +15,8 @@ import { ProfileScreen } from '../features/profile/presentation/screens/ProfileS
 import { SettingsScreen } from '../features/profile/presentation/screens/SettingsScreen';
 import { CreateVibeScreen } from '../features/vibe/presentation/screens/CreateVibeScreen';
 import { VibeDetailScreen } from '../features/vibe/presentation/screens/VibeDetailScreen';
+import { FeedScreen } from '../features/posts/presentation/screens/FeedScreen';
+import { VibeCardEditorScreen } from '../features/profile/presentation/screens/VibeCardEditorScreen';
 
 import { getUser, getAccessToken } from '../infrastructure/storage/AsyncStorage';
 import apiClient from '../infrastructure/api/axios';
@@ -188,6 +190,8 @@ export const AppNavigator = () => {
           <Stack.Screen name="ChatDetail" component={ChatDetailScreen} />
           <Stack.Screen name="DiscoveryDetail" component={DiscoveryDetailScreen} />
           <Stack.Screen name="MatchReveal" component={MatchRevealScreen} />
+          <Stack.Screen name="Feed" component={FeedScreen} />
+          <Stack.Screen name="VibeCardEditor" component={VibeCardEditorScreen} />
         </>
       )}
     </Stack.Navigator>

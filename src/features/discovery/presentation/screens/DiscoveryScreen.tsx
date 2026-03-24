@@ -7,13 +7,14 @@ import {
   Dimensions,
   StatusBar,
   ImageBackground,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useDiscovery } from '../../application/hooks/useDiscovery';
-import { VibeCard } from '../../domain/types/vibe-card.types';
+import type { Candidate } from '../../domain/types/vibe-card.types';
 import { spacing } from '../../../../core/theme/spacing';
 import { colors } from '../../../../core/theme/colors';
 import { typography } from '../../../../core/theme';
@@ -22,51 +23,72 @@ const { width, height } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.85;
 
 export const DiscoveryScreen: React.FC = () => {
-  const { cards } = useDiscovery();
+  const { candidates, handleLike, handleSkip, matchResult, isSwiping, dismissMatch, loading } = useDiscovery();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const handleCardPress = (item: VibeCard) => {
-    navigation.navigate('DiscoveryDetail', { cards, initialIndex: 0 });
+
+  const CURRENT_YEAR = new Date().getFullYear();
+
+  // Navigate to MatchReveal with real match data
+  React.useEffect(() => {
+    if (matchResult?.isMatch && matchResult.match) {
+      const { conversationId, matchedUser } = matchResult.match;
+      navigation.navigate('MatchReveal', {
+        matchedUserName: matchedUser.displayName,
+        matchedUserAvatar: matchedUser.avatar,
+        conversationId,
+      });
+      dismissMatch();
+    }
+  }, [matchResult, navigation, dismissMatch]);
+
+  const handleCardPress = (index: number) => {
+    navigation.navigate('DiscoveryDetail', { candidates, initialIndex: index });
   };
 
-  const renderCardItem = ({ item }: { item: VibeCard }) => {
+  const renderCardItem = (item: Candidate, index: number) => {
+    const age = item.birthYear ? CURRENT_YEAR - item.birthYear : null;
     return (
       <TouchableOpacity
+        key={item._id}
         style={[styles.cardContainer, { width: CARD_WIDTH }]}
         activeOpacity={0.9}
-        onPress={() => handleCardPress(item)}
+        onPress={() => handleCardPress(index)}
       >
         <ImageBackground
           source={item.avatar ? { uri: item.avatar } : undefined}
           style={styles.cardGradient}
           imageStyle={{ borderRadius: 24 }}
         >
-          {/* Bottom Info Overlay */}
           <LinearGradient
             colors={['transparent', 'rgba(0,0,0,0.85)']}
             style={styles.bottomOverlay}
           >
             <View style={styles.infoRow}>
-              <Text style={styles.nameText}>{item.title}</Text>
-              <Text style={styles.ageText}>, 24</Text>
+              <Text style={styles.nameText}>{item.displayName}</Text>
+              {age ? <Text style={styles.ageText}>, {age}</Text> : null}
             </View>
-            <Text style={styles.bioText} numberOfLines={2}>{item.subtitle}</Text>
-            
+            <Text style={styles.bioText} numberOfLines={2}>{item.bio || ''}</Text>
+
             <View style={styles.cardFooter}>
               <View style={styles.locationContainerCard}>
-                <Icon name="location" size={14} color={colors.neonCyan} />
+                <Icon name="location" size={13} color={colors.neonCyan} />
                 <Text style={styles.locationTextCard} numberOfLines={1}>
-                  {item.distance} - {item.location}
+                  Gần bạn
                 </Text>
               </View>
-
               <View style={styles.actionButtons}>
-                <TouchableOpacity style={[styles.actionButton, styles.skipButtonSmall]}>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.skipButtonSmall]}
+                  onPress={handleSkip}
+                  disabled={isSwiping}
+                >
                   <Icon name="close" size={20} color={colors.white} />
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.actionButton, styles.likeButtonSmall]}
-                  onPress={() => navigation.navigate('MatchReveal')}
+                  onPress={handleLike}
+                  disabled={isSwiping}
                 >
                   <Icon name="heart" size={20} color={colors.white} />
                 </TouchableOpacity>
@@ -98,14 +120,29 @@ export const DiscoveryScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* Single Card View */}
+      {/* Card / Loading / Empty */}
       <View
         style={[
           styles.singleCardWrapper,
           { paddingBottom: spacing.xl + insets.bottom },
         ]}
       >
-        {cards.length > 0 && renderCardItem({ item: cards[0] })}
+        {loading ? (
+          <View style={styles.centerContent}>
+            <ActivityIndicator size="large" color={colors.neonCyan} />
+            <Text style={styles.loadingText}>Đang tìm vibe mới...</Text>
+          </View>
+        ) : candidates.length > 0 ? (
+          renderCardItem(candidates[0], 0)
+        ) : (
+          <View style={styles.centerContent}>
+            <Text style={styles.emptyEmoji}>✨</Text>
+            <Text style={styles.emptyTitle}>Hết người rồi!</Text>
+            <Text style={styles.emptySubtitle}>
+              {'Bạn đã xem qua tất cả mọi người trong khu vực.\nQuay lại sau nhé 💫'}
+            </Text>
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -290,5 +327,32 @@ const styles = StyleSheet.create({
   },
   skipButtonSmall: {
     backgroundColor: colors.neonCyan,
+  },
+  centerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.xl,
+  },
+  loadingText: {
+    color: colors.textOpacity60,
+    fontSize: typography.sizes.sm,
+    marginTop: spacing.sm,
+  },
+  emptyEmoji: {
+    fontSize: 56,
+  },
+  emptyTitle: {
+    fontSize: typography.sizes.xl,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: typography.sizes.md,
+    color: colors.textOpacity60,
+    textAlign: 'center',
+    lineHeight: 22,
   },
 });

@@ -20,11 +20,13 @@ import { typography } from '../../../../core/theme/typography';
 import { useProfile } from '../../application/hooks/useProfile';
 import { PastVibeCard } from '../components/PastVibeCard';
 import { ProfileStatItem } from '../components/ProfileStatItem';
+import { useNavigation } from '@react-navigation/native';
 
 const avatarSize = spacing.xxl + spacing.xxl + spacing.lg;
 
 export const ProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
   const {
     profile,
     loading,
@@ -105,6 +107,18 @@ export const ProfileScreen: React.FC = () => {
             )}
           </View>
           <Text style={styles.handle}>{profile.handle}</Text>
+
+          {/* Edit Vibe Card button */}
+          {isOwnProfile && (
+            <TouchableOpacity
+              style={styles.editVibeCardBtn}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('VibeCardEditor')}
+            >
+              <Icon name="create-outline" size={14} color={colors.neonCyan} />
+              <Text style={styles.editVibeCardText}>Chỉnh sửa thẻ Vibe</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.statsSection}>
@@ -409,5 +423,22 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.md,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  editVibeCardBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.neonCyan,
+    backgroundColor: colors.cyanBg,
+  },
+  editVibeCardText: {
+    color: colors.neonCyan,
+    fontSize: typography.sizes.sm,
+    fontWeight: '600',
   },
 });

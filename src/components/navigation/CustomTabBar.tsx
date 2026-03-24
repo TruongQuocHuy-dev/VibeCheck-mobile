@@ -39,7 +39,7 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
     let label = 'Tab';
 
     if (route.name === 'Discovery') {
-      iconName = isFocused ? 'sparkles' : 'sparkles-outline'; // Or home
+      iconName = isFocused ? 'sparkles' : 'sparkles-outline';
       label = 'Discovery';
     } else if (route.name === 'Matches') {
       iconName = isFocused ? 'heart' : 'heart-outline';
@@ -75,6 +75,7 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
     );
   };
 
+  // Split: [Discovery, Matches] | FAB | [Chat, Profile]
   const firstHalf = state.routes.slice(0, 2);
   const secondHalf = state.routes.slice(2);
 
@@ -92,6 +93,7 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
       {secondHalf.map((route, index) => renderTab(route, index + 2))}
     </View>
   );
+
 };
 
 const styles = StyleSheet.create({

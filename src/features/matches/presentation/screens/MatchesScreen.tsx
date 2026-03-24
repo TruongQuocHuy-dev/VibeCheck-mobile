@@ -29,6 +29,7 @@ export const MatchesScreen: React.FC = () => {
     handleMatchPress,
     handleStoryPress,
     handleLockedLikesPress,
+    handleFeedPress,
   } = useMatches();
 
   const contentBottomPadding = insets.bottom + spacing.xxl + spacing.xl;
@@ -39,9 +40,19 @@ export const MatchesScreen: React.FC = () => {
 
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Matches</Text>
-        <TouchableOpacity style={styles.filterButton} activeOpacity={0.85} onPress={handleFilterPress}>
-          <Icon name="options-outline" size={spacing.lg} color={colors.primary} />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.feedButton}
+            activeOpacity={0.85}
+            onPress={handleFeedPress}
+          >
+            <Icon name="flame-outline" size={18} color={colors.neonPink} />
+            <Text style={styles.feedButtonText}>Feed</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.filterButton} activeOpacity={0.85} onPress={handleFilterPress}>
+            <Icon name="options-outline" size={spacing.lg} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -140,6 +151,27 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardDark,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  feedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.neonPink,
+    backgroundColor: colors.pinkBg,
+  },
+  feedButtonText: {
+    color: colors.neonPink,
+    fontSize: typography.sizes.sm,
+    fontWeight: '600',
   },
   contentContainer: {
     paddingTop: spacing.sm,

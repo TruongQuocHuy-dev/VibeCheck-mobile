@@ -60,6 +60,10 @@ export const useMatches = () => {
     console.log('Open premium likes list');
   }, []);
 
+  const handleFeedPress = useCallback(() => {
+    navigation.navigate('Feed' as never);
+  }, [navigation]);
+
   return {
     data,
     hasNewMatches,
@@ -69,5 +73,6 @@ export const useMatches = () => {
     handleMatchPress,
     handleStoryPress,
     handleLockedLikesPress,
+    handleFeedPress,
   };
 };
