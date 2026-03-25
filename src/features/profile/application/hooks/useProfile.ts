@@ -15,6 +15,7 @@ export const useProfile = () => {
   const route = useRoute();
 
   const [ownProfileData, setOwnProfileData] = useState<any>(null);
+  const [ownVibeStories, setOwnVibeStories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   const matchParams = (route.params || {}) as Partial<RootStackParamList['MatchProfile']>;
@@ -24,10 +25,17 @@ export const useProfile = () => {
   const fetchProfile = useCallback(async () => {
     setLoading(true);
     try {
-      const res: any = await apiClient.get(ENDPOINTS.USER.GET_PROFILE);
-      setOwnProfileData(res?.user || res); // safely unwrap
+      const [userRes, storiesRes]: any = await Promise.all([
+        apiClient.get(ENDPOINTS.USER.GET_PROFILE),
+        apiClient.get(ENDPOINTS.VIBE_STORIES.FEED),
+      ]);
+      setOwnProfileData(userRes?.user || userRes); // safely unwrap
+      
+      const userId = userRes?.user?._id || userRes?.id;
+      const ownStoryGroup = (storiesRes.data?.data?.feed || []).find((group: any) => group.user.id === userId);
+      setOwnVibeStories(ownStoryGroup ? ownStoryGroup.stories : []);
     } catch (err) {
-      console.log('Error fetching profile:', err);
+      console.log('Error fetching profile or stories:', err);
     } finally {
       setLoading(false);
     }
@@ -77,15 +85,17 @@ export const useProfile = () => {
     if (!ownProfileData) return profileMockData; // render mock while loading or on failure
 
     const vibes = ownProfileData.vibes || [];
-    const displayName = ownProfileData.displayName || 'Người dùng';
+    const fullName = ownProfileData.fullName || ownProfileData.displayName || 'Người dùng';
+    const nickname = ownProfileData.displayName ? `@${ownProfileData.displayName}` : `@user${ownProfileData.id?.slice(-4)}`;
     const avatar = ownProfileData.avatar || profileMockData.avatar;
     const bio = ownProfileData.bio || 'Sẵn sàng kết nối';
 
     return {
-      ...profileMockData, // keep plans/pastvibes framework fallback
+      ...profileMockData,
       id: ownProfileData._id || ownProfileData.id || profileMockData.id,
-      username: `@${displayName}`,
-      handle: ownProfileData.phone || profileMockData.handle,
+      username: fullName,
+      handle: nickname,
+      bio, 
       avatar,
       currentVibe: {
         id: 'current',
@@ -95,7 +105,7 @@ export const useProfile = () => {
       },
       stats: [
         { id: 'stats-vibes', label: 'Vibes', value: vibes.length },
-        ...profileMockData.stats.slice(1) // fallback likes methods
+        ...profileMockData.stats.slice(1)
       ]
     };
   }, [isMatchProfile, matchParams, ownProfileData]);
@@ -141,7 +151,7 @@ export const useProfile = () => {
     }
 
     navigation.navigate('ChatDetail', {
-      chatId: matchParams.id,
+      conversationId: matchParams.id,
       name: matchParams.name,
       avatar: matchParams.avatar,
       isOnline: Boolean(matchParams.isOnline),
@@ -161,5 +171,14 @@ export const useProfile = () => {
     handleEditAvatar,
     handleUpgradePress,
     handleMessagePress,
+    ownVibeStories,
+    handleOwnStoryPress: () => {
+      if (ownVibeStories.length > 0) {
+        navigation.navigate('VibeDetail', {
+          userId: ownProfileData?._id || ownProfileData?.id,
+          stories: ownVibeStories,
+        });
+      }
+    },
   };
 };

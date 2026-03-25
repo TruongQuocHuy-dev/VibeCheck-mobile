@@ -35,6 +35,8 @@ export interface VibeDetailData {
   expiresIn: string;
   backgroundImage: string;
   track: VibeTrackInfo;
+  ownerName: string;
+  ownerAvatar: string;
   stats: VibeStat[];
   reactions: VibeReactionUser[];
   comments: VibeComment[];

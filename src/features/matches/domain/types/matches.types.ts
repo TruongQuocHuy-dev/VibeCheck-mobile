@@ -9,12 +9,14 @@ export interface NewMatchUser {
 
 export interface MatchVibeStory {
   id: string;
+  ownerId: string;
   ownerName: string;
   ownerAvatar: string;
   backgroundImage: string;
   expiresIn: string;
   hasMusic?: boolean;
   hasLocation?: boolean;
+  stories?: any[];
 }
 
 export interface LockedLikeUser {
@@ -25,6 +27,7 @@ export interface LockedLikeUser {
 export interface MatchesScreenData {
   newMatches: NewMatchUser[];
   matchVibes: MatchVibeStory[];
+  ownVibeStories?: any[];
   lockedLikes: LockedLikeUser[];
   totalLockedLikes: number;
 }

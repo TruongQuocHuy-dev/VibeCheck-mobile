@@ -39,6 +39,8 @@ export const ProfileScreen: React.FC = () => {
     handleEditAvatar,
     handleUpgradePress,
     handleMessagePress,
+    ownVibeStories,
+    handleOwnStoryPress,
   } = useProfile();
 
   const contentBottomPadding = insets.bottom + spacing.xxl + spacing.xl;
@@ -87,8 +89,17 @@ export const ProfileScreen: React.FC = () => {
         </View>
 
         <View style={styles.profileSection}>
-          <View style={styles.avatarWrap}>
+          <TouchableOpacity 
+            style={styles.avatarWrap} 
+            onPress={ownVibeStories && ownVibeStories.length > 0 ? handleOwnStoryPress : undefined}
+            activeOpacity={0.85}
+          >
             <Image source={{ uri: profile.avatar }} style={styles.avatar} />
+            
+            {ownVibeStories && ownVibeStories.length > 0 && (
+              <View style={styles.activeVibeRing} />
+            )}
+
             {isOwnProfile && (
               <TouchableOpacity
                 style={styles.editAvatarButton}
@@ -98,7 +109,7 @@ export const ProfileScreen: React.FC = () => {
                 <Icon name="create-outline" size={spacing.md_sm} color={colors.white} />
               </TouchableOpacity>
             )}
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.nameRow}>
             <Text style={styles.username}>{profile.username}</Text>
@@ -108,16 +119,10 @@ export const ProfileScreen: React.FC = () => {
           </View>
           <Text style={styles.handle}>{profile.handle}</Text>
 
-          {/* Edit Vibe Card button */}
-          {isOwnProfile && (
-            <TouchableOpacity
-              style={styles.editVibeCardBtn}
-              activeOpacity={0.85}
-              onPress={() => navigation.navigate('VibeCardEditor')}
-            >
-              <Icon name="create-outline" size={14} color={colors.neonCyan} />
-              <Text style={styles.editVibeCardText}>Chỉnh sửa thẻ Vibe</Text>
-            </TouchableOpacity>
+          {profile.bio && (
+            <View style={styles.bioContainer}>
+              <Text style={styles.bioText} numberOfLines={2}>{profile.bio}</Text>
+            </View>
           )}
         </View>
 
@@ -267,9 +272,15 @@ const styles = StyleSheet.create({
     height: avatarSize,
     borderRadius: borderRadius.full,
     padding: spacing.xs,
-    borderWidth: 2,
-    borderColor: colors.primary,
     marginBottom: spacing.sm,
+    position: 'relative',
+  },
+  activeVibeRing: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: borderRadius.full,
+    borderWidth: 3,
+    borderColor: colors.neonCyan,
+    margin: -4, // Expansion outward
   },
   avatar: {
     width: '100%',
@@ -440,5 +451,22 @@ const styles = StyleSheet.create({
     color: colors.neonCyan,
     fontSize: typography.sizes.sm,
     fontWeight: '600',
+  },
+  bioContainer: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.bgTooltip,
+    borderWidth: 1,
+    borderColor: colors.overlayBorder,
+    width: '100%',
+  },
+  bioText: {
+    color: colors.textSecondary,
+    fontSize: typography.sizes.md,
+    lineHeight: typography.sizes.lg,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -22,11 +22,28 @@ export const ChatDetailScreen: React.FC = () => {
   const route = useRoute<any>();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { chatId, name, avatar, isOnline } = route.params || {
+  const { chatId, name, avatar, isOnline, lastActive } = route.params || {
     chatId: '1',
     name: 'Neon User',
     avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-1.2.1',
     isOnline: true,
+    lastActive: null,
+  };
+
+  const formatLastActive = (dateString?: string | Date | null) => {
+    if (!dateString) return 'Ngoại tuyến';
+    const activeDate = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - activeDate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'Vừa mới truy cập';
+    if (diffMins < 60) return `Hoạt động ${diffMins} phút trước`;
+    if (diffHours < 24) return `Hoạt động ${diffHours} giờ trước`;
+    if (diffDays < 7) return `Hoạt động ${diffDays} ngày trước`;
+    return 'Ngoại tuyến';
   };
 
   const { messages, sendMessage, isTyping } = useChatDetail(chatId);
@@ -88,7 +105,7 @@ export const ChatDetailScreen: React.FC = () => {
           <Text style={styles.headerTitle}>{name}</Text>
           <View style={styles.statusContainer}>
             <View style={[styles.statusDot, isOnline ? styles.statusOnline : styles.statusOffline]} />
-            <Text style={styles.statusTextHeader}>{isOnline ? 'Online' : 'Offline'}</Text>
+            <Text style={styles.statusTextHeader}>{isOnline ? 'Đang hoạt động' : formatLastActive(lastActive)}</Text>
           </View>
         </View>
 

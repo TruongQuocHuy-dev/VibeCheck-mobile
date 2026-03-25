@@ -7,6 +7,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -22,14 +23,17 @@ export const MatchesScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const {
     data,
+    loading,
     hasNewMatches,
     hasVibeStories,
     topMatches,
-    handleFilterPress,
+    currentUserAvatar,
+    ownVibeStories,
     handleMatchPress,
     handleStoryPress,
+    handleOwnStoryPress,
+    handleAddVibePress,
     handleLockedLikesPress,
-    handleFeedPress,
   } = useMatches();
 
   const contentBottomPadding = insets.bottom + spacing.xxl + spacing.xl;
@@ -40,21 +44,13 @@ export const MatchesScreen: React.FC = () => {
 
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Matches</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.feedButton}
-            activeOpacity={0.85}
-            onPress={handleFeedPress}
-          >
-            <Icon name="flame-outline" size={18} color={colors.neonPink} />
-            <Text style={styles.feedButtonText}>Feed</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.filterButton} activeOpacity={0.85} onPress={handleFilterPress}>
-            <Icon name="options-outline" size={spacing.lg} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
       </View>
 
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.neonCyan} />
+        </View>
+      ) : (
       <ScrollView
         contentContainerStyle={[styles.contentContainer, { paddingBottom: contentBottomPadding }]}
         showsVerticalScrollIndicator={false}
@@ -76,15 +72,34 @@ export const MatchesScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>VIBE TỪ MATCH</Text>
 
-          {hasVibeStories ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {data.matchVibes.map((story) => (
-                <MatchVibeStoryCard key={story.id} story={story} onPress={handleStoryPress} />
-              ))}
-            </ScrollView>
-          ) : (
-            <Text style={styles.emptyText}>Chưa có vibe từ match.</Text>
-          )}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 16 }}>
+            {/* 1. Nút xem/thêm Vibe của Bản thân */}
+            <TouchableOpacity 
+              style={styles.addVibeCard} 
+              onPress={ownVibeStories.length > 0 ? handleOwnStoryPress : handleAddVibePress} 
+              activeOpacity={0.8}
+            >
+              <Image source={{ uri: currentUserAvatar || 'https://via.placeholder.com/150' }} style={styles.addVibeAvatar} />
+              <View style={styles.addVibeOverlay} />
+              
+              {ownVibeStories.length > 0 ? (
+                // Nếu đã có Story -> Hiện vòng tròn màu sắc hoặc hiệu ứng đang active
+                <View style={styles.activeVibeRing} />
+              ) : null}
+
+              <View style={ownVibeStories.length > 0 ? styles.addIconSmallWrap : styles.addIconWrap}>
+                <TouchableOpacity onPress={handleAddVibePress}>
+                   <Icon name="add" size={ownVibeStories.length > 0 ? 16 : 24} color={colors.white} />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.addVibeText}>Bản thân bạn</Text>
+            </TouchableOpacity>
+
+            {/* 2. Danh sách Vibe của những người đã Match */}
+            {data.matchVibes.map((story) => (
+              <MatchVibeStoryCard key={story.id} story={story} onPress={handleStoryPress} />
+            ))}
+          </ScrollView>
         </View>
 
         <View style={styles.section}>
@@ -121,6 +136,7 @@ export const MatchesScreen: React.FC = () => {
           </View>
         </View>
       </ScrollView>
+      )}
     </SafeAreaView>
   );
 };
@@ -142,35 +158,76 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.bold,
   },
-  filterButton: {
-    width: spacing.xxl,
-    height: spacing.xxl,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.cyanBorder,
-    backgroundColor: colors.cardDark,
-    alignItems: 'center',
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
-  },
-  headerRight: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
   },
-  feedButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
+  addVibeCard: {
+    width: 90,
+    height: 120,
+    borderRadius: borderRadius.md,
+    marginRight: spacing.sm,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: colors.cardDark,
     borderWidth: 1,
-    borderColor: colors.neonPink,
-    backgroundColor: colors.pinkBg,
+    borderColor: colors.overlayBorder,
   },
-  feedButtonText: {
-    color: colors.neonPink,
-    fontSize: typography.sizes.sm,
+  addVibeAvatar: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  addVibeOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '50%',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  addIconWrap: {
+    position: 'absolute',
+    top: '35%',
+    left: '50%',
+    transform: [{ translateX: -16 }, { translateY: -16 }],
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.neonCyan,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.bgDark,
+  },
+  addIconSmallWrap: {
+    position: 'absolute',
+    bottom: 24,
+    right: 4,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.neonCyan,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.bgDark,
+  },
+  activeVibeRing: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 2,
+    borderColor: colors.neonCyan,
+    borderRadius: borderRadius.md,
+  },
+  addVibeText: {
+    position: 'absolute',
+    bottom: 8,
+    left: 4,
+    right: 4,
+    textAlign: 'center',
+    color: colors.white,
+    fontSize: typography.sizes.xs,
     fontWeight: '600',
   },
   contentContainer: {

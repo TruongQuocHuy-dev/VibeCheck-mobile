@@ -30,6 +30,7 @@ export interface UserProfile {
   handle: string;
   avatar: string;
   isVerified: boolean;
+  bio?: string;
   stats: UserStat[];
   currentVibe?: CurrentVibe;
   premiumPlan: PremiumPlan;

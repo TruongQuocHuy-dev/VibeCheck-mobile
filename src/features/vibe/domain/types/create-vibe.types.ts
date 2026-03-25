@@ -2,8 +2,8 @@ export interface VibeTrack {
   id: string;
   title: string;
   artist: string;
-  artwork: string;
-  previewType?: 'play';
+  coverUrl?: string;
+  previewUrl?: string;
 }
 
 export interface VibeDurationOption {

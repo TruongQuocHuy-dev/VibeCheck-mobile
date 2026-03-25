@@ -39,5 +39,9 @@ export const ENDPOINTS = {
     COMMENT: (id: string) => `/posts/${id}/comments`, // POST: add comment
     DELETE: (id: string) => `/posts/${id}`,           // DELETE
   },
+  VIBE_STORIES: {
+    FEED: '/vibe-stories/feed',              // GET: feed of matches' stories
+    CREATE: '/vibe-stories',                 // POST: upload photo + music info
+  },
 } as const;
 

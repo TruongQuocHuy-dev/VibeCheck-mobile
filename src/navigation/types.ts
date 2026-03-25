@@ -11,16 +11,10 @@ export type RootStackParamList = {
   Notifications: undefined;
   CreateVibe: undefined;
   VibeDetail: {
-    photoUrl?: string;
-    caption?: string;
-    location?: string;
-    durationLabel?: string;
-    trackTitle?: string;
-    trackArtist?: string;
-    ownerName?: string;
-    ownerAvatar?: string;
-    fromMatchStory?: boolean;
-  } | undefined;
+    userId: string;
+    stories: any[];
+    initialIndex?: number;
+  };
   MatchProfile: {
     id: string;
     name: string;

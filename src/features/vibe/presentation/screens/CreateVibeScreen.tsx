@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   ImageBackground,
   ScrollView,
@@ -10,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Video from 'react-native-video';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -32,14 +34,25 @@ export const CreateVibeScreen: React.FC = () => {
     selectedTrackId,
     selectedDurationId,
     canSubmit,
+    isSubmitting,
+    isSearchingMusic,
     searchKeyword,
     handleClose,
+    handlePickImage,
     handleCaptionChange,
     handleTrackSelect,
     handleDurationSelect,
     handleSubmit,
     setSearchKeyword,
+    playingTrackUrl,
   } = useCreateVibe();
+
+  // Launch image picker initially if no photo is picked yet
+  React.useEffect(() => {
+    if (!previewPhoto && !isSubmitting) {
+      handlePickImage();
+    }
+  }, [previewPhoto, handlePickImage, isSubmitting]);
 
   const bottomActionPadding = insets.bottom + spacing.md;
   const scrollBottomPadding = spacing.xxl + spacing.xxl + bottomActionPadding;
@@ -70,11 +83,11 @@ export const CreateVibeScreen: React.FC = () => {
           <ImageBackground source={{ uri: previewPhoto }} style={styles.previewImage} imageStyle={styles.previewImageInner}>
             <View style={styles.previewOverlay}>
               <Icon name="eye-off-outline" size={spacing.xxl} color={colors.primary} />
-              <Text style={styles.previewText}>Ảnh sẽ được làm mờ cho đến khi match</Text>
+              <Text style={styles.previewText}>Ảnh sẽ được hiển thị với các matches</Text>
             </View>
 
-            <TouchableOpacity style={styles.retakeButton} activeOpacity={0.85}>
-              <Icon name="refresh" size={spacing.lg} color={colors.textPrimary} />
+            <TouchableOpacity style={styles.retakeButton} activeOpacity={0.85} onPress={handlePickImage}>
+              <Icon name="camera-reverse" size={spacing.lg} color={colors.textPrimary} />
             </TouchableOpacity>
           </ImageBackground>
         </View>
@@ -107,6 +120,14 @@ export const CreateVibeScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Thêm nhạc</Text>
 
+          {playingTrackUrl && (
+            <Video
+              source={{ uri: playingTrackUrl }}
+              repeat={true}
+              style={{ width: 0, height: 0 }}
+            />
+          )}
+
           <View style={styles.searchWrap}>
             <Icon name="search" size={spacing.lg} color={colors.textMuted} />
             <TextInput
@@ -130,7 +151,15 @@ export const CreateVibeScreen: React.FC = () => {
                 onPress={handleTrackSelect}
               />
             )}
-            ListEmptyComponent={<Text style={styles.emptyText}>Không tìm thấy bài hát.</Text>}
+            ListEmptyComponent={
+              isSearchingMusic ? (
+                <View style={{ padding: spacing.md }}>
+                  <ActivityIndicator size="small" color={colors.neonCyan} />
+                </View>
+              ) : (
+                <Text style={styles.emptyText}>Không tìm thấy bài hát.</Text>
+              )
+            }
           />
         </View>
 

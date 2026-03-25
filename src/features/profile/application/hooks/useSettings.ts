@@ -32,8 +32,8 @@ export const useSettings = () => {
 
   const handleItemPress = useCallback((item: SettingsItem) => {
     switch (item.id) {
-      case 'edit-profile':
-        navigation.goBack();
+      case 'edit-vibe-card':
+        navigation.navigate('VibeCardEditor');
         break;
       case 'faq':
         console.log('Open FAQ');

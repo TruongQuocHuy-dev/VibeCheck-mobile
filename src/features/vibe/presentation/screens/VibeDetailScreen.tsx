@@ -8,7 +8,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Animated,
 } from 'react-native';
+import Video from 'react-native-video';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -31,35 +33,69 @@ export const VibeDetailScreen: React.FC = () => {
     handleMenuPress,
     handleSendReply,
     handleReactionPress,
+    currentIndex,
+    stories,
+    progressAnim,
+    handleNext,
+    handlePrev,
+    isMuted,
+    toggleMute,
+    handlePressIn,
+    handlePressOut,
   } = useVibeDetail();
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
-      <ImageBackground source={{ uri: detail.backgroundImage }} style={styles.storyBackground} blurRadius={2}>
+      <ImageBackground source={{ uri: detail.backgroundImage }} style={styles.storyBackground} blurRadius={0}>
         <LinearGradient
           colors={['rgba(0,0,0,0.65)', 'rgba(0,0,0,0.15)']}
           style={[styles.topOverlay, { paddingTop: insets.top + spacing.xs }]}
         >
           <View style={styles.progressRow}>
-            {storySegments.map((segment) => (
-              <View key={segment.id} style={styles.progressTrack}>
-                <View style={[styles.progressFill, { flex: segment.progress }]} />
-              </View>
-            ))}
+            {stories.map((_, index) => {
+              let width: any = '0%';
+              if (index < currentIndex) width = '100%';
+              else if (index === currentIndex) {
+                width = progressAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0%', '100%'],
+                });
+              }
+
+              return (
+                <View key={index} style={styles.progressTrack}>
+                  <Animated.View style={[styles.progressFill, { width }]} />
+                </View>
+              );
+            })}
           </View>
 
           <View style={styles.headerRow}>
             <TouchableOpacity style={styles.ownerInfo} activeOpacity={0.9} onPress={handleProfilePress}>
-              <Image source={{ uri: detail.ownerAvatar }} style={styles.ownerAvatar} />
+              <Image source={{ uri: detail.ownerAvatar || 'https://via.placeholder.com/150' }} style={styles.ownerAvatar} />
               <View style={styles.ownerTextWrap}>
-                <Text style={styles.ownerName}>{detail.ownerName}</Text>
-                <Text style={styles.ownerMeta}>{detail.expiresIn}</Text>
+                <View style={styles.ownerNameRow}>
+                  <Text style={styles.ownerName} numberOfLines={1}>{detail.ownerName}</Text>
+                  <Text style={styles.ownerTimeDot}>•</Text>
+                  <Text style={styles.ownerTimeText}>{detail.expiresIn}</Text>
+                </View>
+                {detail.track && (
+                  <View style={styles.headerMusicWrap}>
+                    <Icon name="musical-note" size={spacing.sm} color={colors.neonCyan} />
+                    <Text style={styles.headerMusicText} numberOfLines={1}>
+                      {detail.track.title} • {detail.track.artist}
+                    </Text>
+                  </View>
+                )}
               </View>
             </TouchableOpacity>
 
             <View style={styles.headerActions}>
+              <TouchableOpacity style={styles.iconButton} onPress={toggleMute} activeOpacity={0.85}>
+                <Icon name={isMuted ? "volume-mute" : "volume-high"} size={spacing.lg} color={colors.white} />
+              </TouchableOpacity>
               <TouchableOpacity style={styles.iconButton} onPress={handleMenuPress} activeOpacity={0.85}>
                 <Icon name="ellipsis-horizontal" size={spacing.lg} color={colors.white} />
               </TouchableOpacity>
@@ -70,35 +106,46 @@ export const VibeDetailScreen: React.FC = () => {
           </View>
         </LinearGradient>
 
+        {/* Music Video Playback */}
+        {detail.track?.previewUrl && (
+          <Video
+            source={{ uri: detail.track.previewUrl }}
+            repeat={true}
+            muted={isMuted}
+            style={{ width: 0, height: 0 }}
+          />
+        )}
+
+        {/* Touch zones for navigation */}
+        <View style={styles.touchAreaContainer}>
+          <TouchableOpacity
+            style={styles.touchLeft}
+            onPress={handlePrev}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            activeOpacity={1}
+          />
+          <TouchableOpacity
+            style={styles.touchRight}
+            onPress={handleNext}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            activeOpacity={1}
+          />
+        </View>
+
         <View style={styles.centerBlock}>
-          <Text style={styles.captionText}>{detail.caption}</Text>
-
-          <View style={styles.metaPillsWrap}>
-            <View style={styles.metaPill}>
-              <Icon name="time" size={spacing.md_sm} color={colors.neonCyan} />
-              <Text style={styles.metaPillText}>{detail.expiresIn}</Text>
-            </View>
-
-            <View style={styles.metaPill}>
-              <Icon name="location" size={spacing.md_sm} color={colors.textPrimary} />
-              <Text style={styles.metaPillText}>{detail.location}</Text>
-            </View>
-          </View>
-
-          <View style={styles.musicCard}>
-            <Icon name="musical-note" size={spacing.md} color={colors.bgDark} />
-            <View style={styles.musicTextWrap}>
-              <Text style={styles.musicTitle} numberOfLines={1}>{detail.track.title}</Text>
-              <Text style={styles.musicArtist} numberOfLines={1}>{detail.track.artist}</Text>
-            </View>
-            <Icon name="play" size={spacing.md_sm} color={colors.bgDark} />
-          </View>
+          {/* Focal area for the image/story content */}
         </View>
 
         <LinearGradient
-          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.72)']}
+          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.8)']}
           style={[styles.bottomOverlay, { paddingBottom: insets.bottom + spacing.md }]}
         >
+          {detail.caption ? (
+            <Text style={styles.captionText}>{detail.caption}</Text>
+          ) : null}
+
           <View style={styles.reactionsRow}>
             {quickReactions.map((item) => {
               const active = selectedReaction === item.id;
@@ -171,7 +218,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     height: '100%',
   },
+  touchAreaContainer: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: 'row',
+    zIndex: 1, // Above background but below overlays?
+  },
+  touchLeft: {
+    width: '30%',
+    height: '100%',
+  },
+  touchRight: {
+    width: '70%',
+    height: '100%',
+  },
   headerRow: {
+    zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -196,11 +257,42 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
+    flexShrink: 1, // Allow name to shrink if too long
+  },
+  ownerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ownerTimeDot: {
+    color: colors.textOpacity60,
+    fontSize: spacing.sm,
+  },
+  ownerTimeText: {
+    color: colors.textOpacity80,
+    fontSize: typography.sizes.sm,
   },
   ownerMeta: {
     color: colors.textOpacity80,
     fontSize: typography.sizes.md,
     marginTop: 2,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  headerMusicWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  headerMusicText: {
+    color: colors.neonCyan,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.medium,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   headerActions: {
     flexDirection: 'row',
@@ -222,12 +314,13 @@ const styles = StyleSheet.create({
   },
   captionText: {
     color: colors.white,
-    fontSize: typography.sizes.xxxl,
-    lineHeight: typography.sizes.display,
-    fontWeight: typography.weights.bold,
+    fontSize: typography.sizes.xl,
+    lineHeight: typography.sizes.xxl,
+    fontWeight: typography.weights.semiBold,
     textShadowColor: 'rgba(0,0,0,0.35)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 8,
+    marginBottom: spacing.sm,
   },
   metaPillsWrap: {
     flexDirection: 'row',

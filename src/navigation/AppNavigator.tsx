@@ -39,7 +39,7 @@ export const AppNavigator = () => {
 
       try {
         // Verify token validity on startup
-        const res: any = await apiClient.get(ENDPOINTS.USER.UPDATE_PROFILE);
+        const res: any = await apiClient.get(ENDPOINTS.USER.GET_PROFILE);
         const apiUser = res?.user;
 
         if (user.hasPassword === false) {

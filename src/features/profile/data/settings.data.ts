@@ -17,7 +17,7 @@ export const settingsSections: SettingsSection[] = [
     title: 'TÀI KHOẢN',
     items: [
       {
-        id: 'edit-profile',
+        id: 'edit-vibe-card',
         title: 'Chỉnh sửa hồ sơ',
         icon: 'person-outline',
         iconColor: colors.primary,

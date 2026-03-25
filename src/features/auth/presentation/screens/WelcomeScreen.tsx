@@ -47,6 +47,14 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onLoginSuccess }) 
   const handleGoogleLogin = async () => {
     try {
       await GoogleSignin.hasPlayServices();
+      
+      // Luôn sign out trước khi sign in để buộc hiện hộp thoại chọn tài khoản
+      try {
+        await GoogleSignin.signOut();
+      } catch (err) {
+        // Có thể chưa login nên signOut lỗi, bỏ qua
+      }
+
       const userInfo = await GoogleSignin.signIn();
       const idToken = userInfo.data?.idToken;
 

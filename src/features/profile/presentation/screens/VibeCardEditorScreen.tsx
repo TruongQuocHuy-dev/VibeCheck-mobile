@@ -96,6 +96,20 @@ export const VibeCardEditorScreen: React.FC = () => {
           <Text style={styles.avatarHint}>Nhấn để đổi ảnh đại diện</Text>
         </View>
 
+        {/* ── Full Name ── */}
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>Họ và tên thật</Text>
+          <Text style={styles.sublabel}>Tên này hiển thị ở màn hình Match và Chat</Text>
+          <TextInput
+            style={styles.input}
+            value={form.fullName}
+            onChangeText={(v) => updateField('fullName', v)}
+            placeholder="Ví dụ: Nguyễn Văn A"
+            placeholderTextColor={colors.textOpacity60}
+            maxLength={50}
+          />
+        </View>
+
         {/* ── Display Name ── */}
         <View style={styles.fieldGroup}>
           <Text style={styles.label}>Tên hiển thị</Text>

@@ -12,7 +12,9 @@ export interface VibeTag {
 }
 
 interface VibeCardFormData {
+  fullName: string;
   displayName: string;
+  birthYear: number | null;
   bio: string;
   /** Array of VibeTag _id strings selected by user */
   vibes: string[];
@@ -41,7 +43,9 @@ interface UseVibeCardEditor {
 
 export const useVibeCardEditor = (): UseVibeCardEditor => {
   const [form, setForm] = useState<VibeCardFormData>({
+    fullName: '',
     displayName: '',
+    birthYear: null,
     bio: '',
     vibes: [],
     avatar: null,
@@ -62,7 +66,9 @@ export const useVibeCardEditor = (): UseVibeCardEditor => {
         ]);
         const user = profileRes?.user ?? profileRes;
         setForm({
+          fullName: user.fullName ?? '',
           displayName: user.displayName ?? '',
+          birthYear: user.birthYear ?? null,
           bio: user.bio ?? '',
           vibes: user.vibes ?? [],
           avatar: user.avatar ?? null,
@@ -167,8 +173,16 @@ export const useVibeCardEditor = (): UseVibeCardEditor => {
       await apiClient.patch(ENDPOINTS.USER.UPDATE_BIO, { bio: form.bio });
       // Update vibes
       await apiClient.post(ENDPOINTS.USER.UPDATE_VIBES, { vibes: form.vibes });
-      // Note: displayName requires birthYear via PATCH /profile — only save if both are available.
-      // For now we skip displayName patching to avoid the 400 error.
+      
+      // Update fullName and displayName (now that backend accepts fullName)
+      if (form.birthYear) {
+        await apiClient.patch(ENDPOINTS.USER.UPDATE_PROFILE, {
+          fullName: form.fullName,
+          displayName: form.displayName,
+          birthYear: form.birthYear,
+        });
+      }
+
       Alert.alert('✅ Đã lưu', 'Thẻ Vibe của bạn đã được cập nhật!');
     } catch (err: any) {
       setError(err?.message ?? 'Lưu thất bại.');

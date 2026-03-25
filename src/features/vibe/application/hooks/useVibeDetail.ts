@@ -1,58 +1,102 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
+import { Animated } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../../navigation/types';
 import { vibeDetailMockData } from '../../data/vibe-detail.data';
+import { useProfile } from '../../../../features/profile/application/hooks/useProfile';
 
 type VibeDetailNav = NativeStackNavigationProp<RootStackParamList>;
 
 type VibeDetailRouteParams = {
-  photoUrl?: string;
-  caption?: string;
-  location?: string;
-  durationLabel?: string;
-  trackTitle?: string;
-  trackArtist?: string;
-  ownerName?: string;
-  ownerAvatar?: string;
-  fromMatchStory?: boolean;
+  userId: string;
+  stories: any[];
+  initialIndex?: number;
 };
 
 export const useVibeDetail = () => {
   const navigation = useNavigation<VibeDetailNav>();
   const route = useRoute();
+  const { ownProfileData } = useProfile();
   const params = (route.params || {}) as VibeDetailRouteParams;
+  const stories = params.stories || [];
 
+  const [currentIndex, setCurrentIndex] = useState(params.initialIndex || 0);
   const [replyInput, setReplyInput] = useState('');
   const [selectedReaction, setSelectedReaction] = useState<string | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const storyTimer = useRef<any>(null);
+
+  const currentStory = stories[currentIndex] || null;
+
+  const handleNext = useCallback(() => {
+    if (currentIndex < stories.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+      progressAnim.setValue(0);
+    } else {
+      navigation.goBack();
+    }
+  }, [currentIndex, stories.length, navigation, progressAnim]);
+
+  const handlePrev = useCallback(() => {
+    if (currentIndex > 0) {
+      setCurrentIndex(prev => prev - 1);
+      progressAnim.setValue(0);
+    }
+  }, [currentIndex, progressAnim]);
+
+  useEffect(() => {
+    if (!currentStory || isPaused) {
+      progressAnim.stopAnimation();
+      if (storyTimer.current) clearTimeout(storyTimer.current);
+      return;
+    }
+
+    progressAnim.setValue(0);
+    Animated.timing(progressAnim, {
+      toValue: 1,
+      duration: 30000, // 30 seconds per story to match music preview
+      useNativeDriver: false,
+    }).start();
+
+    storyTimer.current = setTimeout(() => {
+      handleNext();
+    }, 30000);
+
+    return () => {
+      if (storyTimer.current) clearTimeout(storyTimer.current);
+    };
+  }, [currentIndex, currentStory, isPaused, handleNext, progressAnim]);
 
   const detail = useMemo(() => {
+    if (!currentStory) return vibeDetailMockData;
+    
     return {
       ...vibeDetailMockData,
-      caption: params.caption || vibeDetailMockData.caption,
-      location: params.location || vibeDetailMockData.location,
-      expiresIn: params.durationLabel ? `${params.durationLabel} còn lại` : vibeDetailMockData.expiresIn,
-      backgroundImage: params.photoUrl || vibeDetailMockData.backgroundImage,
-      track: {
-        title: params.trackTitle || vibeDetailMockData.track.title,
-        artist: params.trackArtist || vibeDetailMockData.track.artist,
-      },
-      ownerName: params.ownerName || 'Linh Chi',
-      ownerAvatar:
-        params.ownerAvatar ||
-        'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=300&q=80',
-      isMatchStory: !!params.fromMatchStory,
+      id: currentStory.id || currentStory._id,
+      caption: currentStory.caption || '',
+      location: currentStory.location || 'Hà Nội, Việt Nam',
+      expiresAt: currentStory.expiresAt,
+      backgroundImage: currentStory.imageUrl || currentStory.backgroundImage,
+      track: currentStory.music || vibeDetailMockData.track,
+      ownerName: params.userId === 'me' 
+        ? (ownProfileData?.fullName || ownProfileData?.displayName || 'Bạn') 
+        : (currentStory.ownerName || 'Vibe User'),
+      ownerAvatar: params.userId === 'me'
+        ? (ownProfileData?.avatar)
+        : (currentStory.ownerAvatar || 'https://via.placeholder.com/150'),
     };
-  }, [params.caption, params.durationLabel, params.fromMatchStory, params.location, params.ownerAvatar, params.ownerName, params.photoUrl, params.trackArtist, params.trackTitle]);
+  }, [currentStory, params.userId, ownProfileData]);
 
   const storySegments = useMemo(() => {
-    const segmentCount = 4;
-
-    return Array.from({ length: segmentCount }, (_, index) => ({
+    return stories.map((_, index) => ({
       id: `segment-${index}`,
-      progress: index === 0 ? 1 : 0,
+      index,
     }));
-  }, []);
+  }, [stories]);
 
   const quickReactions = useMemo(() => {
     return [
@@ -102,5 +146,15 @@ export const useVibeDetail = () => {
     handleMenuPress,
     handleSendReply,
     handleReactionPress,
+    currentIndex,
+    stories,
+    currentStory,
+    progressAnim,
+    handleNext,
+    handlePrev,
+    isMuted,
+    toggleMute: () => setIsMuted(prev => !prev),
+    handlePressIn: () => setIsPaused(true),
+    handlePressOut: () => setIsPaused(false),
   };
 };

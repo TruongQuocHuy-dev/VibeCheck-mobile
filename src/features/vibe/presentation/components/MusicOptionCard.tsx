@@ -31,8 +31,8 @@ export const MusicOptionCard: React.FC<MusicOptionCardProps> = memo(
           {isNoMusic ? (
             <Icon name="musical-notes-outline" size={spacing.md} color={colors.textSecondary} />
           ) : (
-            <ImageBackground source={{ uri: track.artwork }} style={styles.coverImage} imageStyle={styles.coverImageInner}>
-              {track.previewType === 'play' && (
+            <ImageBackground source={{ uri: track.coverUrl }} style={styles.coverImage} imageStyle={styles.coverImageInner}>
+              {!!track.previewUrl && (
                 <View style={styles.playOverlay}>
                   <Icon name="play" size={spacing.md_sm} color={colors.white} />
                 </View>
