@@ -36,6 +36,11 @@ export const MatchRevealScreen: React.FC = () => {
   const myAvatarUri: string | null = route.params?.myAvatar ?? null;
 
   const handleChatPress = () => {
+    if (!conversationId) {
+      navigation.navigate('Main', { screen: 'Chat' });
+      return;
+    }
+
     navigation.navigate('ChatDetail', {
       conversationId,
       name: matchedUserName,
@@ -45,7 +50,12 @@ export const MatchRevealScreen: React.FC = () => {
   };
 
   const handleBrowsePress = () => {
-    navigation.goBack();
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.navigate('Main', { screen: 'Discovery' });
   };
 
   return (

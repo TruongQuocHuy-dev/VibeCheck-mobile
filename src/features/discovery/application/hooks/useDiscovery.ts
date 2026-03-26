@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchCandidates, submitSwipe } from '../../data/discovery.service';
 import type { Candidate, MatchResult } from '../../domain/types/vibe-card.types';
+import { onSocketEvent, offSocketEvent } from '../../../../infrastructure/services/socket.service';
 
 interface UseDiscoveryReturn {
   candidates: Candidate[];
@@ -40,6 +41,19 @@ export const useDiscovery = (): UseDiscoveryReturn => {
     loadCandidates();
   }, [loadCandidates]);
 
+  useEffect(() => {
+    const handleNewMatch = (payload: MatchResult['match']) => {
+      if (!payload) return;
+      setMatchResult({ isMatch: true, match: payload });
+    };
+
+    onSocketEvent<MatchResult['match']>('new_match', handleNewMatch);
+
+    return () => {
+      offSocketEvent<MatchResult['match']>('new_match', handleNewMatch);
+    };
+  }, []);
+
   const swipe = useCallback(async (type: 'like' | 'dislike') => {
     if (!currentCandidate || isSwiping) return;
 
@@ -51,7 +65,10 @@ export const useDiscovery = (): UseDiscoveryReturn => {
       setCandidates((prev) => prev.slice(1));
 
       if (result.isMatch && result.match) {
+        console.log('Discovery: MATCH DETECTED!', result.match);
         setMatchResult(result);
+      } else {
+        console.log('Discovery: No match for this swipe.');
       }
 
       // Re-fetch if queue is getting low

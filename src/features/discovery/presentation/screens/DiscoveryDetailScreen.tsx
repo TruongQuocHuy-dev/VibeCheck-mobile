@@ -37,19 +37,24 @@ export const DiscoveryDetailScreen: React.FC = () => {
     likeStyle,
     matchResult,
     isSwiping,
+    dismissMatch,
   } = useDiscoveryDetail(candidates, initialIndex, () => navigation.goBack());
 
   // Navigate to MatchReveal when a match happens
   useEffect(() => {
     if (matchResult?.isMatch && matchResult.match) {
+      console.log('DiscoveryDetail: Navigating to MatchReveal', matchResult.match);
       const { conversationId, matchedUser } = matchResult.match;
       navigation.navigate('MatchReveal', {
         matchedUserName: matchedUser.displayName,
         matchedUserAvatar: matchedUser.avatar,
         conversationId,
       });
+      
+      // Clear match result after navigation to prevent repeat triggers
+      setTimeout(() => dismissMatch(), 500);
     }
-  }, [matchResult, navigation]);
+  }, [matchResult, navigation, dismissMatch]);
 
   const insets = useSafeAreaInsets();
 
@@ -109,7 +114,7 @@ export const DiscoveryDetailScreen: React.FC = () => {
             <Animated.View style={skipStyle}>
               <TouchableOpacity
                 style={[styles.bigButton, styles.skipBtn]}
-                onPress={() => swipe('skip')}
+                onPress={() => swipe('dislike')}
                 disabled={isSwiping}
               >
                 <Icon name="close" size={36} color={colors.neonCyan} />

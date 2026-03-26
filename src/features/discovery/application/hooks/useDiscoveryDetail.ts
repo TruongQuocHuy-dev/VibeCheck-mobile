@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Dimensions, PanResponder } from 'react-native';
 import {
   useSharedValue,
@@ -10,13 +10,14 @@ import {
 } from 'react-native-reanimated';
 import { submitSwipe } from '../../data/discovery.service';
 import type { Candidate, MatchResult } from '../../domain/types/vibe-card.types';
+import { onSocketEvent, offSocketEvent } from '../../../../infrastructure/services/socket.service';
 
 const { width } = Dimensions.get('window');
 
 interface UseDiscoveryDetailReturn {
   currentCandidate: Candidate | undefined;
   nextCandidate: Candidate | undefined;
-  swipe: (type: 'like' | 'skip') => void;
+  swipe: (type: 'like' | 'dislike') => void;
   panHandlers: ReturnType<typeof PanResponder.create>['panHandlers'];
   animatedStyle: ReturnType<typeof useAnimatedStyle>;
   backgroundCardStyle: ReturnType<typeof useAnimatedStyle>;
@@ -25,6 +26,7 @@ interface UseDiscoveryDetailReturn {
   likeStyle: ReturnType<typeof useAnimatedStyle>;
   matchResult: MatchResult | null;
   isSwiping: boolean;
+  dismissMatch: () => void;
 }
 
 export const useDiscoveryDetail = (
@@ -35,6 +37,7 @@ export const useDiscoveryDetail = (
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
   const [isSwiping, setIsSwiping] = useState(false);
+  const pendingExitAfterLikeRef = useRef(false);
 
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -43,6 +46,19 @@ export const useDiscoveryDetail = (
 
   const currentCandidate = candidates[currentIndex];
   const nextCandidate = candidates[currentIndex + 1];
+
+  useEffect(() => {
+    const handleNewMatch = (payload: MatchResult['match']) => {
+      if (!payload) return;
+      setMatchResult({ isMatch: true, match: payload });
+    };
+
+    onSocketEvent<MatchResult['match']>('new_match', handleNewMatch);
+
+    return () => {
+      offSocketEvent<MatchResult['match']>('new_match', handleNewMatch);
+    };
+  }, []);
 
   const resetAnimation = () => {
     translateX.value = 0;
@@ -53,15 +69,20 @@ export const useDiscoveryDetail = (
 
   const goNext = useCallback(() => {
     if (currentIndex >= candidates.length - 1) {
+      // On the last card, wait for like API result before leaving the screen.
+      if (isSwiping) {
+        pendingExitAfterLikeRef.current = true;
+        return;
+      }
       onEnd();
     } else {
       setCurrentIndex((prev) => prev + 1);
       resetAnimation();
     }
-  }, [currentIndex, candidates.length, onEnd]);
+  }, [currentIndex, candidates.length, isSwiping, onEnd]);
 
   const swipe = useCallback(
-    (type: 'like' | 'skip') => {
+    (type: 'like' | 'dislike') => {
       if (isSwiping || !currentCandidate) return;
 
       const toValue = type === 'like' ? width : -width;
@@ -78,11 +99,26 @@ export const useDiscoveryDetail = (
         setIsSwiping(true);
         submitSwipe(currentCandidate._id, 'like')
           .then((result) => {
-            if (result.isMatch) {
+            console.log('Swipe Like Result:', result);
+            if (result.isMatch && result.match) {
+              console.log('MATCH DETECTED in DiscoveryDetail!');
               setMatchResult(result);
+              pendingExitAfterLikeRef.current = false;
+              return;
+            }
+
+            if (pendingExitAfterLikeRef.current) {
+              pendingExitAfterLikeRef.current = false;
+              onEnd();
             }
           })
-          .catch((err) => console.warn('Swipe API error:', err))
+          .catch((err) => {
+            console.warn('Swipe Like API error:', err);
+            if (pendingExitAfterLikeRef.current) {
+              pendingExitAfterLikeRef.current = false;
+              onEnd();
+            }
+          })
           .finally(() => setIsSwiping(false));
       } else {
         submitSwipe(currentCandidate._id, 'dislike').catch((err) =>
@@ -103,7 +139,7 @@ export const useDiscoveryDetail = (
       },
       onPanResponderRelease: (_, g) => {
         if (g.dx > 100) swipe('like');
-        else if (g.dx < -100) swipe('skip');
+        else if (g.dx < -100) swipe('dislike');
         else {
           translateX.value = withTiming(0);
           rotate.value = withTiming(0);
@@ -179,5 +215,6 @@ export const useDiscoveryDetail = (
     likeStyle,
     matchResult,
     isSwiping,
+    dismissMatch: useCallback(() => setMatchResult(null), []),
   };
 };

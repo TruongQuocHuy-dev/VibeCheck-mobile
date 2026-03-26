@@ -63,8 +63,8 @@ export const useChat = (): UseChat => {
     onSocketEvent<unknown>('new_match', handleNewMatch);
 
     return () => {
-      offSocketEvent('message_notification');
-      offSocketEvent('new_match');
+      offSocketEvent<{ conversationId: string; message: Message }>('message_notification', handleNewMessage);
+      offSocketEvent<unknown>('new_match', handleNewMatch);
     };
   }, [loadConversations]);
 

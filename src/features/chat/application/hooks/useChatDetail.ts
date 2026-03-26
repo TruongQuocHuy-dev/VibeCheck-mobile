@@ -1,28 +1,96 @@
-import { useState } from 'react';
-import { Message } from '../../domain/types/chat-detail.types';
-import { mockMessages } from '../../data/chat-detail.data';
+import { useState, useEffect, useCallback } from 'react';
+import { Message } from '../../domain/types/chat.types';
+import { fetchMessages, sendMessageApi } from '../../data/chat.service';
+import { getUser } from '../../../../infrastructure/storage/AsyncStorage';
+import { 
+  onSocketEvent, 
+  offSocketEvent, 
+  joinConversation, 
+  leaveConversation 
+} from '../../../../infrastructure/services/socket.service';
 
-export const useChatDetail = (chatId: string) => {
-  const [messages, setMessages] = useState<Message[]>(mockMessages);
-  const [isTyping, setIsTyping] = useState(true); // Mock typing effect
+interface ChatDetailMessage extends Message {
+  isMe: boolean;
+}
 
-  const sendMessage = (text: string) => {
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      senderId: 'me',
-      senderName: 'Me',
-      senderAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuASBQhT7NvVl5U2rpDhI_IDHLtP1fdBVFWlIYcjWZKHDm3MvCZJawMnsmwKzXxCsxbbxbfTMvNp6tDBg2jAfEh2JBfCkg0Pj6smPC9qobCKZChOUduPpzxe3hMwuyq-U7euPjZIngvWwz1Bnv_wDqTT-bl-OWrq8nkccjEhoPFI_jG65yHYtN8bQgRfj0TMWJNFTEHPnSagHgew77Lkj1nZYUOM7-_Zz7DF9T6RLJm8_nzkFn1saV-uuGvdS-yHVaiJA7YBdZsuQw',
-      text,
-      timestamp: 'Today, ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isRead: false,
-      isMe: true,
+export const useChatDetail = (conversationId: string) => {
+  const [messages, setMessages] = useState<ChatDetailMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
+
+  const loadMessages = useCallback(async (userId: string) => {
+    if (!conversationId || conversationId === '1') {
+      setLoading(false);
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const data = await fetchMessages(conversationId);
+      const mapped = data.map(msg => ({
+        ...msg,
+        isMe: (msg.sender as any)?._id === userId || (msg.sender as any) === userId
+      }));
+      setMessages(mapped);
+    } catch (err) {
+      console.error('Fetch messages error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [conversationId]);
+
+  useEffect(() => {
+    const init = async () => {
+      const user: any = await getUser();
+      const userId = user?.id || user?._id;
+      setCurrentUserId(userId);
+      if (userId) {
+        loadMessages(userId);
+      }
     };
-    setMessages([...messages, newMessage]);
+    init();
+
+    if (conversationId && conversationId !== '1') {
+      joinConversation(conversationId);
+
+      const handleNewMessage = (payload: { conversationId: string; message: Message }) => {
+        if (payload.conversationId === conversationId) {
+          setMessages((prev) => [
+            ...prev, 
+            { 
+              ...payload.message, 
+              isMe: (payload.message.sender as any)?._id === currentUserId || (payload.message.sender as any) === currentUserId 
+            }
+          ]);
+        }
+      };
+
+      onSocketEvent<{ conversationId: string; message: Message }>('new_message', handleNewMessage);
+
+      return () => {
+        leaveConversation(conversationId);
+        offSocketEvent<{ conversationId: string; message: Message }>('new_message', handleNewMessage);
+      };
+    }
+  }, [conversationId, loadMessages, currentUserId]);
+
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || !conversationId) return;
+
+    try {
+      // Optimistic update could go here, but let's stick to API + socket for now
+      await sendMessageApi(conversationId, text);
+    } catch (err) {
+      console.error('Send message error:', err);
+    }
   };
 
   return {
     messages,
+    loading,
     sendMessage,
     isTyping,
+    refreshMessages: loadMessages,
   };
 };

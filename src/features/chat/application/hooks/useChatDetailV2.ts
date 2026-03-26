@@ -67,7 +67,7 @@ export const useChatDetailV2 = ({
 
     return () => {
       leaveConversation(conversationId);
-      offSocketEvent('new_message');
+      offSocketEvent<{ conversationId: string; message: Message }>('new_message', handleNewMessage);
     };
   }, [conversationId, loadMessages]);
 

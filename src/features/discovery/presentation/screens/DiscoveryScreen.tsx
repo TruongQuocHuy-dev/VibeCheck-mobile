@@ -32,6 +32,7 @@ export const DiscoveryScreen: React.FC = () => {
   // Navigate to MatchReveal with real match data
   React.useEffect(() => {
     if (matchResult?.isMatch && matchResult.match) {
+      console.log('DiscoveryScreen: MATCH DETECTED! Navigating to MatchReveal', matchResult.match);
       const { conversationId, matchedUser } = matchResult.match;
       navigation.navigate('MatchReveal', {
         matchedUserName: matchedUser.displayName,

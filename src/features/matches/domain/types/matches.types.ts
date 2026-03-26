@@ -1,10 +1,12 @@
 export interface NewMatchUser {
   id: string;
+  listKey: string;
   name: string;
   age: number;
   avatar: string;
   isOnline?: boolean;
   isNew?: boolean;
+  conversationId?: string;
 }
 
 export interface MatchVibeStory {

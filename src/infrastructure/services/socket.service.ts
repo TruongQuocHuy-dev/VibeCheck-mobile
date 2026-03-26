@@ -71,7 +71,12 @@ export const onSocketEvent = <T>(event: string, callback: (data: T) => void): vo
 /**
  * Remove a specific socket event listener.
  */
-export const offSocketEvent = (event: string): void => {
+export const offSocketEvent = <T>(event: string, callback?: (data: T) => void): void => {
+  if (callback) {
+    socket?.off(event, callback as (...args: any[]) => void);
+    return;
+  }
+
   socket?.off(event);
 };
 

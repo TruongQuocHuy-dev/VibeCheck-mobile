@@ -21,6 +21,7 @@ import { VibeCardEditorScreen } from '../features/profile/presentation/screens/V
 import { getUser, getAccessToken } from '../infrastructure/storage/AsyncStorage';
 import apiClient from '../infrastructure/api/axios';
 import { ENDPOINTS } from '../infrastructure/api/endpoints';
+import { connectSocket, disconnectSocket } from '../infrastructure/services/socket.service';
 
 const Stack = createNativeStackNavigator<any>();
 
@@ -89,6 +90,34 @@ export const AppNavigator = () => {
       sub3.remove();
     };
   }, []);
+
+  React.useEffect(() => {
+    let mounted = true;
+
+    const setupSocket = async () => {
+      if (appState !== 'MAIN') {
+        disconnectSocket();
+        return;
+      }
+
+      const user: any = await getUser();
+      if (!mounted) return;
+
+      const userId = user?.id || user?._id;
+      if (userId) {
+        await connectSocket(userId);
+      }
+    };
+
+    setupSocket();
+
+    return () => {
+      mounted = false;
+      if (appState !== 'MAIN') {
+        disconnectSocket();
+      }
+    };
+  }, [appState]);
 
   if (appState === 'LOADING') {
     return null; // Render loading screen or splash

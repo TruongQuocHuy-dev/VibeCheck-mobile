@@ -16,17 +16,16 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { colors } from '../../../../core/theme/colors';
 import { useChatDetail } from '../../application/hooks/useChatDetail';
-import { Message } from '../../domain/types/chat-detail.types';
 
 export const ChatDetailScreen: React.FC = () => {
   const route = useRoute<any>();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { chatId, name, avatar, isOnline, lastActive } = route.params || {
-    chatId: '1',
-    name: 'Neon User',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-1.2.1',
-    isOnline: true,
+  const { conversationId, name, avatar, isOnline, lastActive } = route.params || {
+    conversationId: '1',
+    name: 'Vibe User',
+    avatar: 'https://via.placeholder.com/150',
+    isOnline: false,
     lastActive: null,
   };
 
@@ -46,7 +45,7 @@ export const ChatDetailScreen: React.FC = () => {
     return 'Ngoại tuyến';
   };
 
-  const { messages, sendMessage, isTyping } = useChatDetail(chatId);
+  const { messages, loading, sendMessage, isTyping } = useChatDetail(conversationId);
   const [inputText, setInputText] = useState('');
   const flatListRef = useRef<FlatList>(null);
 
@@ -58,34 +57,33 @@ export const ChatDetailScreen: React.FC = () => {
     }
   };
 
-  const renderMessageItem = ({ item }: { item: Message }) => {
+  const renderMessageItem = ({ item }: { item: any }) => {
     return (
       <View style={[styles.messageContainer, item.isMe ? styles.messageRight : styles.messageLeft]}>
         {!item.isMe && (
-          <Image source={{ uri: item.senderAvatar || avatar }} style={styles.avatar} />
+          <Image source={{ uri: item.sender?.avatar || avatar }} style={styles.avatar} />
         )}
 
         <View style={styles.bubbleContent}>
-          {!item.isMe && <Text style={styles.senderName}>{item.senderName}</Text>}
+          {!item.isMe && <Text style={styles.senderName}>{item.sender?.displayName}</Text>}
           
           <View style={[styles.bubble, item.isMe ? styles.bubbleUser : styles.bubblePartner]}>
-            {item.imageUrl ? (
-              <Image source={{ uri: item.imageUrl }} style={styles.messageImage} resizeMode="cover" />
+            {item.type === 'image' ? (
+              <Image source={{ uri: item.content }} style={styles.messageImage} resizeMode="cover" />
             ) : (
-              <Text style={styles.messageText}>{item.text}</Text>
+              <Text style={styles.messageText}>{item.content}</Text>
             )}
           </View>
 
           {item.isMe && (
             <View style={styles.statusRow}>
-              <Text style={styles.statusText}>{item.isRead ? 'Read' : 'Sent'}</Text>
-              {item.isRead && <Icon name="checkmark-done" size={12} color="#00F0FF" />}
+              <Icon name="checkmark-done" size={12} color="#00F0FF" />
             </View>
           )}
         </View>
 
         {item.isMe && (
-          <Image source={{ uri: item.senderAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb' }} style={styles.avatar} />
+          <Image source={{ uri: item.sender?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb' }} style={styles.avatar} />
         )}
       </View>
     );
@@ -123,19 +121,14 @@ export const ChatDetailScreen: React.FC = () => {
           ref={flatListRef}
           data={messages}
           renderItem={renderMessageItem}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item: any) => item._id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-          ListFooterComponent={
-            isTyping ? (
-              <View style={styles.typingIndicator}>
-                <View style={styles.typingDotContainer}>
-                  <View style={styles.typingDot} />
-                  <View style={styles.typingDot} />
-                  <View style={styles.typingDot} />
-                </View>
-                <Text style={styles.typingText}>{name} is typing...</Text>
+          ListEmptyComponent={
+            !loading ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>Bắt đầu cuộc trò chuyện với {name}</Text>
               </View>
             ) : null
           }
@@ -382,5 +375,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 4,
     elevation: 4,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 100,
+  },
+  emptyText: {
+    color: 'rgba(255, 255, 255, 0.4)',
+    fontSize: 14,
+    fontStyle: 'italic',
   },
 });

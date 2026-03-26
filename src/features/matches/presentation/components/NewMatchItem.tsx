@@ -24,7 +24,9 @@ export const NewMatchItem: React.FC<NewMatchItemProps> = memo(({ user, onPress }
         )}
       </View>
 
-      <Text style={styles.nameText}>{`${user.name}, ${user.age}`}</Text>
+      <Text style={styles.nameText} numberOfLines={2}>
+        {user.name}
+      </Text>
     </Pressable>
   );
 });
@@ -77,8 +79,9 @@ const styles = StyleSheet.create({
   },
   nameText: {
     color: colors.textPrimary,
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.md,
     fontWeight: typography.weights.medium,
+    textAlign: 'center',
   },
 });
 
