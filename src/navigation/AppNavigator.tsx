@@ -218,7 +218,11 @@ export const AppNavigator = () => {
           <Stack.Screen name="MatchProfile" component={ProfileScreen} />
           <Stack.Screen name="ChatDetail" component={ChatDetailScreen} />
           <Stack.Screen name="DiscoveryDetail" component={DiscoveryDetailScreen} />
-          <Stack.Screen name="MatchReveal" component={MatchRevealScreen} />
+          <Stack.Screen
+            name="MatchReveal"
+            component={MatchRevealScreen}
+            options={{ animation: 'none' }}
+          />
           <Stack.Screen name="Feed" component={FeedScreen} />
           <Stack.Screen name="VibeCardEditor" component={VibeCardEditorScreen} />
         </>

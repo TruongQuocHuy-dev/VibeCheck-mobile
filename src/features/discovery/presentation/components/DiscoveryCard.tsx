@@ -53,7 +53,7 @@ export const DiscoveryCard = React.memo(({ candidate }: DiscoveryCardProps) => {
         >
           {/* Name & Age */}
           <Text style={styles.nameText}>
-            {candidate.displayName}
+            {candidate.fullName || candidate.displayName}
             {age ? (
               <Text style={styles.ageText}>, {age}</Text>
             ) : null}

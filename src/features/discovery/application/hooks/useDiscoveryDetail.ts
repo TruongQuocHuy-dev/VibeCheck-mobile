@@ -36,8 +36,8 @@ export const useDiscoveryDetail = (
 ): UseDiscoveryDetailReturn => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
+  const [matchQueue, setMatchQueue] = useState<NonNullable<MatchResult['match']>[]>([]);
   const [isSwiping, setIsSwiping] = useState(false);
-  const pendingExitAfterLikeRef = useRef(false);
 
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -47,10 +47,31 @@ export const useDiscoveryDetail = (
   const currentCandidate = candidates[currentIndex];
   const nextCandidate = candidates[currentIndex + 1];
 
+  const enqueueMatch = useCallback((match: MatchResult['match']) => {
+    if (!match) return;
+
+    setMatchQueue((prev) => {
+      const existsInQueue = prev.some((item) => item.conversationId === match.conversationId);
+      const isCurrent = matchResult?.match?.conversationId === match.conversationId;
+
+      if (existsInQueue || isCurrent) {
+        return prev;
+      }
+
+      return [...prev, match];
+    });
+  }, [matchResult?.match?.conversationId]);
+
+  useEffect(() => {
+    if (!matchResult && matchQueue.length > 0) {
+      setMatchResult({ isMatch: true, match: matchQueue[0] });
+    }
+  }, [matchResult, matchQueue]);
+
   useEffect(() => {
     const handleNewMatch = (payload: MatchResult['match']) => {
       if (!payload) return;
-      setMatchResult({ isMatch: true, match: payload });
+      enqueueMatch(payload);
     };
 
     onSocketEvent<MatchResult['match']>('new_match', handleNewMatch);
@@ -58,7 +79,7 @@ export const useDiscoveryDetail = (
     return () => {
       offSocketEvent<MatchResult['match']>('new_match', handleNewMatch);
     };
-  }, []);
+  }, [enqueueMatch]);
 
   const resetAnimation = () => {
     translateX.value = 0;
@@ -69,64 +90,79 @@ export const useDiscoveryDetail = (
 
   const goNext = useCallback(() => {
     if (currentIndex >= candidates.length - 1) {
-      // On the last card, wait for like API result before leaving the screen.
-      if (isSwiping) {
-        pendingExitAfterLikeRef.current = true;
-        return;
-      }
       onEnd();
-    } else {
-      setCurrentIndex((prev) => prev + 1);
-      resetAnimation();
+      return;
     }
-  }, [currentIndex, candidates.length, isSwiping, onEnd]);
+
+    setCurrentIndex((prev) => prev + 1);
+    resetAnimation();
+  }, [currentIndex, candidates.length, onEnd]);
+
+  const animateSwipeOut = useCallback(
+    (type: 'like' | 'dislike') => {
+      const toValue = type === 'like' ? width : -width;
+      const rotateVal = type === 'like' ? 15 : -15;
+
+      translateX.value = withTiming(toValue, { duration: 260 });
+      rotate.value = withTiming(rotateVal, { duration: 260 });
+      opacity.value = withTiming(0, { duration: 260 }, () => {
+        runOnJS(goNext)();
+      });
+    },
+    [goNext, translateX, rotate, opacity]
+  );
 
   const swipe = useCallback(
     (type: 'like' | 'dislike') => {
       if (isSwiping || !currentCandidate) return;
 
-      const toValue = type === 'like' ? width : -width;
-      const rotateVal = type === 'like' ? 15 : -15;
-
-      translateX.value = withTiming(toValue, { duration: 300 });
-      rotate.value = withTiming(rotateVal, { duration: 300 });
-      opacity.value = withTiming(0, { duration: 300 }, () => {
-        runOnJS(goNext)();
-      });
-
-      // Fire API swipe asynchronously (don't block animation)
       if (type === 'like') {
-        setIsSwiping(true);
+        if (currentCandidate.hasLikedMe) {
+          // Reciprocal-like candidate: prioritize immediate MatchReveal, no swipe-out animation.
+          translateX.value = withTiming(0, { duration: 80 });
+          rotate.value = withTiming(0, { duration: 80 });
+
+          setIsSwiping(true);
+          submitSwipe(currentCandidate._id, 'like')
+            .then((result) => {
+              console.log('Swipe Like Result:', result);
+              if (result.isMatch && result.match) {
+                console.log('MATCH DETECTED in DiscoveryDetail!');
+                enqueueMatch(result.match);
+                return;
+              }
+
+              // Fallback: if backend no longer returns match, keep normal flow.
+              animateSwipeOut('like');
+            })
+            .catch((err) => {
+              console.warn('Swipe Like API error:', err);
+              resetAnimation();
+            })
+            .finally(() => setIsSwiping(false));
+
+          return;
+        }
+
+        // Normal case (A likes first): keep smooth swipe-right animation.
+        animateSwipeOut('like');
         submitSwipe(currentCandidate._id, 'like')
           .then((result) => {
-            console.log('Swipe Like Result:', result);
             if (result.isMatch && result.match) {
-              console.log('MATCH DETECTED in DiscoveryDetail!');
               setMatchResult(result);
-              pendingExitAfterLikeRef.current = false;
-              return;
-            }
-
-            if (pendingExitAfterLikeRef.current) {
-              pendingExitAfterLikeRef.current = false;
-              onEnd();
             }
           })
           .catch((err) => {
             console.warn('Swipe Like API error:', err);
-            if (pendingExitAfterLikeRef.current) {
-              pendingExitAfterLikeRef.current = false;
-              onEnd();
-            }
-          })
-          .finally(() => setIsSwiping(false));
+          });
       } else {
+        animateSwipeOut('dislike');
         submitSwipe(currentCandidate._id, 'dislike').catch((err) =>
           console.warn('Swipe API error:', err)
         );
       }
     },
-    [currentCandidate, isSwiping, goNext, translateX, rotate, opacity]
+    [currentCandidate, isSwiping, animateSwipeOut, translateX, rotate, enqueueMatch]
   );
 
   const panResponder = useRef(
@@ -215,6 +251,9 @@ export const useDiscoveryDetail = (
     likeStyle,
     matchResult,
     isSwiping,
-    dismissMatch: useCallback(() => setMatchResult(null), []),
+    dismissMatch: useCallback(() => {
+      setMatchResult(null);
+      setMatchQueue((prev) => prev.slice(1));
+    }, []),
   };
 };

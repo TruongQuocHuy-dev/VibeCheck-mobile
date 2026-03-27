@@ -17,8 +17,8 @@ export const useMatchReveal = () => {
   const scalePulse = useSharedValue(1);
 
   React.useEffect(() => {
-    leftX.value = withDelay(80, withSpring(0, { damping: 14, stiffness: 100 }));
-    rightX.value = withDelay(80, withSpring(0, { damping: 14, stiffness: 100 }));
+    leftX.value = withDelay(0, withSpring(0, { damping: 14, stiffness: 115 }));
+    rightX.value = withDelay(0, withSpring(0, { damping: 14, stiffness: 115 }));
     scalePulse.value = withRepeat(withTiming(1.08, { duration: 1200 }), -1, true);
   }, []);
 

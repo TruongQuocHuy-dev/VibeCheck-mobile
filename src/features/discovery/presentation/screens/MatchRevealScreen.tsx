@@ -7,6 +7,7 @@ import {
   Dimensions,
   Image,
   StatusBar,
+  DeviceEventEmitter,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -36,6 +37,8 @@ export const MatchRevealScreen: React.FC = () => {
   const myAvatarUri: string | null = route.params?.myAvatar ?? null;
 
   const handleChatPress = () => {
+    DeviceEventEmitter.emit('match_reveal_consumed');
+
     if (!conversationId) {
       navigation.navigate('Main', { screen: 'Chat' });
       return;
@@ -50,6 +53,8 @@ export const MatchRevealScreen: React.FC = () => {
   };
 
   const handleBrowsePress = () => {
+    DeviceEventEmitter.emit('match_reveal_consumed');
+
     if (navigation.canGoBack()) {
       navigation.goBack();
       return;

@@ -8,9 +8,11 @@ import {
   StatusBar,
   ImageBackground,
   ActivityIndicator,
+  DeviceEventEmitter,
+  InteractionManager,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useDiscovery } from '../../application/hooks/useDiscovery';
@@ -23,25 +25,52 @@ const { width, height } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.85;
 
 export const DiscoveryScreen: React.FC = () => {
-  const { candidates, handleLike, handleSkip, matchResult, isSwiping, dismissMatch, loading } = useDiscovery();
+  const { candidates, handleLike, handleSkip, matchResult, isSwiping, dismissMatch, refreshCandidates, loading } = useDiscovery();
   const navigation = useNavigation<any>();
+  const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
 
   const CURRENT_YEAR = new Date().getFullYear();
 
   // Navigate to MatchReveal with real match data
   React.useEffect(() => {
+    if (!isFocused) return;
+
     if (matchResult?.isMatch && matchResult.match) {
       console.log('DiscoveryScreen: MATCH DETECTED! Navigating to MatchReveal', matchResult.match);
       const { conversationId, matchedUser } = matchResult.match;
       navigation.navigate('MatchReveal', {
-        matchedUserName: matchedUser.displayName,
+        matchedUserName: matchedUser.fullName || matchedUser.displayName,
         matchedUserAvatar: matchedUser.avatar,
         conversationId,
       });
-      dismissMatch();
     }
-  }, [matchResult, navigation, dismissMatch]);
+  }, [matchResult, navigation, isFocused]);
+
+  React.useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('match_reveal_consumed', () => {
+      dismissMatch();
+    });
+
+    return () => {
+      sub.remove();
+    };
+  }, [dismissMatch]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+
+      InteractionManager.runAfterInteractions(() => {
+        if (!active) return;
+        refreshCandidates();
+      });
+
+      return () => {
+        active = false;
+      };
+    }, [refreshCandidates])
+  );
 
   const handleCardPress = (index: number) => {
     navigation.navigate('DiscoveryDetail', { candidates, initialIndex: index });
@@ -66,7 +95,7 @@ export const DiscoveryScreen: React.FC = () => {
             style={styles.bottomOverlay}
           >
             <View style={styles.infoRow}>
-              <Text style={styles.nameText}>{item.displayName}</Text>
+              <Text style={styles.nameText}>{item.fullName || item.displayName}</Text>
               {age ? <Text style={styles.ageText}>, {age}</Text> : null}
             </View>
             <Text style={styles.bioText} numberOfLines={2}>{item.bio || ''}</Text>

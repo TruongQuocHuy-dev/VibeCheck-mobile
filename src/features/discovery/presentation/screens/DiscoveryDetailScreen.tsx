@@ -6,10 +6,12 @@ import {
   TouchableOpacity,
   StatusBar,
   ActivityIndicator,
+  DeviceEventEmitter,
+  InteractionManager,
 } from 'react-native';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useIsFocused, useFocusEffect } from '@react-navigation/native';
 import Animated from 'react-native-reanimated';
 
 import { useDiscoveryDetail } from '../../application/hooks/useDiscoveryDetail';
@@ -17,13 +19,68 @@ import { DiscoveryCard } from '../components/DiscoveryCard';
 import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
 import type { Candidate } from '../../domain/types/vibe-card.types';
+import { fetchCandidates } from '../../data/discovery.service';
 
 export const DiscoveryDetailScreen: React.FC = () => {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
+  const isFocused = useIsFocused();
 
-  const candidates: Candidate[] = route.params?.candidates || [];
+  const initialCandidates: Candidate[] = route.params?.candidates || [];
+  const [candidates, setCandidates] = React.useState<Candidate[]>(initialCandidates);
+  const isRefreshingRef = React.useRef(false);
   const initialIndex: number = route.params?.initialIndex || 0;
+
+  useEffect(() => {
+    setCandidates(initialCandidates);
+  }, [initialCandidates]);
+
+  const mergeLatestCandidates = React.useCallback((latest: Candidate[]) => {
+    setCandidates((prev) => {
+      const seen = new Set<string>();
+      const merged = [...prev, ...latest].filter((item) => {
+        if (seen.has(item._id)) {
+          return false;
+        }
+        seen.add(item._id);
+        return true;
+      });
+
+      return merged;
+    });
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+
+      const refresh = () => {
+        if (!active || isRefreshingRef.current) {
+          return;
+        }
+
+        isRefreshingRef.current = true;
+
+        InteractionManager.runAfterInteractions(async () => {
+          try {
+            const latest = await fetchCandidates();
+            if (!active) return;
+            mergeLatestCandidates(latest);
+          } catch (error) {
+            // Keep current deck if refresh fails.
+          } finally {
+            isRefreshingRef.current = false;
+          }
+        });
+      };
+
+      refresh();
+
+      return () => {
+        active = false;
+      };
+    }, [mergeLatestCandidates])
+  );
 
   const {
     currentCandidate,
@@ -42,19 +99,28 @@ export const DiscoveryDetailScreen: React.FC = () => {
 
   // Navigate to MatchReveal when a match happens
   useEffect(() => {
+    if (!isFocused) return;
+
     if (matchResult?.isMatch && matchResult.match) {
       console.log('DiscoveryDetail: Navigating to MatchReveal', matchResult.match);
       const { conversationId, matchedUser } = matchResult.match;
       navigation.navigate('MatchReveal', {
-        matchedUserName: matchedUser.displayName,
+        matchedUserName: matchedUser.fullName || matchedUser.displayName,
         matchedUserAvatar: matchedUser.avatar,
         conversationId,
       });
-      
-      // Clear match result after navigation to prevent repeat triggers
-      setTimeout(() => dismissMatch(), 500);
     }
-  }, [matchResult, navigation, dismissMatch]);
+  }, [matchResult, navigation, isFocused]);
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('match_reveal_consumed', () => {
+      dismissMatch();
+    });
+
+    return () => {
+      sub.remove();
+    };
+  }, [dismissMatch]);
 
   const insets = useSafeAreaInsets();
 
