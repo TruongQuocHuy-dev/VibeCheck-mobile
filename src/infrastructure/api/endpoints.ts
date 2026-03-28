@@ -25,8 +25,12 @@ export const ENDPOINTS = {
   },
   SWIPES: {
     CANDIDATES: '/swipes/candidates',      // GET: users not yet swiped
+    CANDIDATES_ESTIMATE: '/swipes/candidates/estimate',
     MATCHES: '/swipes/matches',            // GET: matched users
     CREATE: '/swipes',                     // POST: swipe action
+    UNDO_DISLIKE: (swipedId: string) => `/swipes/dislike/${swipedId}`,
+    BLOCK: '/swipes/block',
+    REPORT: '/swipes/report',
   },
   CONVERSATIONS: {
     LIST: '/conversations',                // GET: chat list

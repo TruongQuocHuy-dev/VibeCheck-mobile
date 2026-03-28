@@ -2,8 +2,7 @@ import apiClient from '../api/axios';
 import { ENDPOINTS } from '../api/endpoints';
 
 /**
- * Auth API Service — calls backend with axios.
- * Replaces the old fetch-based auth.service.ts in the feature infrastructure folder.
+ * Auth service — global infrastructure layer.
  */
 
 interface CheckPhoneResponse {
@@ -60,4 +59,4 @@ const login = async (phone: string, password: string): Promise<LoginResponse> =>
   return apiClient.post(ENDPOINTS.AUTH.LOGIN, { phone, password });
 };
 
-export const AuthApiService = { checkPhone, register, setPassword, login };
+export const AuthService = { checkPhone, register, setPassword, login };

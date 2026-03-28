@@ -1,4 +1,4 @@
-import type { Candidate } from '../features/discovery/domain/types/vibe-card.types';
+import type { Candidate, DiscoveryFilters } from '../features/discovery/domain/types/vibe-card.types';
 
 export type RootStackParamList = {
   Welcome: undefined;
@@ -23,7 +23,7 @@ export type RootStackParamList = {
     isOnline?: boolean;
   };
   ChatDetail: { conversationId: string; name: string; avatar: string | null; isOnline: boolean };
-  DiscoveryDetail: { candidates: Candidate[]; initialIndex: number };
+  DiscoveryDetail: { candidates: Candidate[]; initialIndex: number; filters?: DiscoveryFilters };
   MatchReveal: {
     matchedUserName: string;
     matchedUserAvatar: string | null;

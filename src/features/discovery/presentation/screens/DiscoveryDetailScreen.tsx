@@ -7,7 +7,6 @@ import {
   StatusBar,
   ActivityIndicator,
   DeviceEventEmitter,
-  InteractionManager,
 } from 'react-native';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -18,22 +17,55 @@ import { useDiscoveryDetail } from '../../application/hooks/useDiscoveryDetail';
 import { DiscoveryCard } from '../components/DiscoveryCard';
 import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
-import type { Candidate } from '../../domain/types/vibe-card.types';
-import { fetchCandidates } from '../../data/discovery.service';
+import type { Candidate, DiscoveryFilters } from '../../domain/types/vibe-card.types';
+import { blockCandidate, fetchCandidates, reportCandidate } from '../../data/discovery.service';
+import { DiscoveryFilterSheet } from '../components/DiscoveryFilterSheet';
+import { UserSafetyActionSheet } from '../../../../shared/components/actions/index';
+import { useToast } from '../../../../shared/hooks/useToast';
+import { useLoading } from '../../../../shared/hooks/useLoading';
+import { EmptyState } from '../../../../shared/components/feedback/Empty';
 
 export const DiscoveryDetailScreen: React.FC = () => {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
+  const { showToast } = useToast();
+  const { showLoading, hideLoading } = useLoading();
 
   const initialCandidates: Candidate[] = route.params?.candidates || [];
+  const routeFilters = route.params?.filters;
+  const initialFilters: DiscoveryFilters = {
+    minAge: routeFilters?.minAge ?? 18,
+    maxAge: routeFilters?.maxAge ?? 40,
+    gender: routeFilters?.gender ?? 'all',
+  };
   const [candidates, setCandidates] = React.useState<Candidate[]>(initialCandidates);
+  const [filters, setFilters] = React.useState<DiscoveryFilters>(initialFilters);
+  const [isFilterSheetVisible, setIsFilterSheetVisible] = React.useState(false);
+  const [isSafetyMenuVisible, setIsSafetyMenuVisible] = React.useState(false);
   const isRefreshingRef = React.useRef(false);
   const initialIndex: number = route.params?.initialIndex || 0;
 
   useEffect(() => {
     setCandidates(initialCandidates);
   }, [initialCandidates]);
+
+  const {
+    currentCandidate,
+    nextCandidate,
+    swipe,
+    panHandlers,
+    animatedStyle,
+    backgroundCardStyle,
+    tintStyle,
+    skipStyle,
+    likeStyle,
+    matchResult,
+    isSwiping,
+    canUndoDislike,
+    undoLastDislike,
+    dismissMatch,
+  } = useDiscoveryDetail(candidates, initialIndex, () => navigation.goBack());
 
   const mergeLatestCandidates = React.useCallback((latest: Candidate[]) => {
     setCandidates((prev) => {
@@ -53,6 +85,10 @@ export const DiscoveryDetailScreen: React.FC = () => {
   useFocusEffect(
     React.useCallback(() => {
       let active = true;
+      const ric = (globalThis as any).requestIdleCallback;
+      const cancelRic = (globalThis as any).cancelIdleCallback;
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      let idleId: number | null = null;
 
       const refresh = () => {
         if (!active || isRefreshingRef.current) {
@@ -61,41 +97,94 @@ export const DiscoveryDetailScreen: React.FC = () => {
 
         isRefreshingRef.current = true;
 
-        InteractionManager.runAfterInteractions(async () => {
+        const doRefresh = async () => {
           try {
-            const latest = await fetchCandidates();
+            const latestWithFilter = await fetchCandidates(filters);
             if (!active) return;
-            mergeLatestCandidates(latest);
+            mergeLatestCandidates(latestWithFilter);
           } catch (error) {
             // Keep current deck if refresh fails.
           } finally {
             isRefreshingRef.current = false;
           }
-        });
+        };
+
+        if (typeof ric === 'function') {
+          idleId = ric(doRefresh);
+        } else {
+          timeoutId = setTimeout(doRefresh, 0);
+        }
       };
 
       refresh();
 
       return () => {
         active = false;
+        if (idleId !== null && typeof cancelRic === 'function') {
+          cancelRic(idleId);
+        }
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
       };
-    }, [mergeLatestCandidates])
+    }, [mergeLatestCandidates, filters])
   );
 
-  const {
-    currentCandidate,
-    nextCandidate,
-    swipe,
-    panHandlers,
-    animatedStyle,
-    backgroundCardStyle,
-    tintStyle,
-    skipStyle,
-    likeStyle,
-    matchResult,
-    isSwiping,
-    dismissMatch,
-  } = useDiscoveryDetail(candidates, initialIndex, () => navigation.goBack());
+  const handleApplyFilters = React.useCallback((nextFilters: DiscoveryFilters) => {
+    setFilters(nextFilters);
+    DeviceEventEmitter.emit('discovery_filters_changed', nextFilters);
+  }, []);
+
+  const handleBlockCurrentUser = React.useCallback(() => {
+    const userId = currentCandidate?._id;
+    if (!userId) return;
+
+    showLoading('Dang chan...');
+    blockCandidate(userId)
+      .then(() => {
+        swipe('dislike');
+        showToast('Da chan nguoi dung.', 'success');
+      })
+      .catch((error: any) => {
+        showToast(error?.message || 'Khong the chan. Vui long thu lai.', 'error');
+      })
+      .finally(() => {
+        hideLoading();
+      });
+  }, [currentCandidate?._id, swipe, showLoading, hideLoading, showToast]);
+
+  const handleReportCurrentUser = React.useCallback(() => {
+    const userId = currentCandidate?._id;
+    if (!userId) return;
+
+    showLoading('Dang gui bao cao...');
+    reportCandidate(userId, 'unsafe_behavior')
+      .then(() => {
+        showToast('Da tiep nhan bao cao. Cam on ban.', 'success');
+      })
+      .catch((error: any) => {
+        showToast(error?.message || 'Khong the bao cao. Vui long thu lai.', 'error');
+      })
+      .finally(() => {
+        hideLoading();
+      });
+  }, [currentCandidate?._id, showLoading, hideLoading, showToast]);
+
+  const handleUndoDislike = React.useCallback(() => {
+    showLoading('Dang hoan tac...');
+    undoLastDislike()
+      .then((ok) => {
+        if (ok) {
+          showToast('Da tra lai the vua bo qua.', 'success');
+        }
+      })
+      .catch((error: any) => {
+        showToast(error?.message || 'Khong the hoan tac. Vui long thu lai.', 'error');
+      })
+      .finally(() => {
+        hideLoading();
+      });
+  }, [undoLastDislike, showLoading, hideLoading, showToast]);
 
   // Navigate to MatchReveal when a match happens
   useEffect(() => {
@@ -126,12 +215,13 @@ export const DiscoveryDetailScreen: React.FC = () => {
 
   if (!currentCandidate) {
     return (
-      <SafeAreaView style={styles.emptyContainer}>
-        <Icon name="checkmark-circle-outline" size={64} color={colors.neonCyan} />
-        <Text style={styles.emptyText}>Đã xem hết rồi! 🎉</Text>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backBtnText}>Quay lại</Text>
-        </TouchableOpacity>
+      <SafeAreaView style={styles.container}>
+        <EmptyState
+          emoji="🎉"
+          title="Đã xem hết rồi!"
+          actionLabel="Quay lại"
+          onActionPress={() => navigation.goBack()}
+        />
       </SafeAreaView>
     );
   }
@@ -154,7 +244,21 @@ export const DiscoveryDetailScreen: React.FC = () => {
           {isSwiping && (
             <ActivityIndicator size="small" color={colors.neonCyan} style={{ marginRight: 8 }} />
           )}
-          <TouchableOpacity style={styles.headerButton}>
+          <TouchableOpacity style={styles.headerButton} onPress={() => setIsFilterSheetVisible(true)}>
+            <Icon name="options-outline" size={20} color={colors.white} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.headerButton, !canUndoDislike && styles.headerButtonDisabled]}
+            onPress={handleUndoDislike}
+            disabled={!canUndoDislike || isSwiping}
+          >
+            <Icon
+              name="arrow-undo"
+              size={20}
+              color={canUndoDislike ? colors.neonCyan : colors.textMuted}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.headerButton} onPress={() => setIsSafetyMenuVisible(true)}>
             <Icon name="ellipsis-vertical" size={22} color={colors.white} />
           </TouchableOpacity>
         </View>
@@ -196,9 +300,25 @@ export const DiscoveryDetailScreen: React.FC = () => {
                 <Icon name="heart" size={36} color={colors.white} />
               </TouchableOpacity>
             </Animated.View>
+
           </View>
         </View>
       </View>
+
+      <DiscoveryFilterSheet
+        visible={isFilterSheetVisible}
+        filters={filters}
+        onClose={() => setIsFilterSheetVisible(false)}
+        onApply={handleApplyFilters}
+      />
+
+      <UserSafetyActionSheet
+        visible={isSafetyMenuVisible}
+        userName={currentCandidate?.fullName || currentCandidate?.displayName}
+        onClose={() => setIsSafetyMenuVisible(false)}
+        onBlock={handleBlockCurrentUser}
+        onReport={handleReportCurrentUser}
+      />
     </View>
   );
 };
@@ -210,31 +330,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    backgroundColor: colors.bgDark,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.md,
-  },
-  emptyText: {
-    color: colors.textPrimary,
-    fontSize: 20,
-    fontWeight: '700',
-    marginTop: spacing.sm,
-  },
-  backBtn: {
-    marginTop: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
-    borderRadius: 999,
-    backgroundColor: colors.neonCyan,
-  },
-  backBtnText: {
-    color: colors.bgDark,
-    fontWeight: '700',
-    fontSize: 16,
   },
   backButton: {
     position: 'absolute',
@@ -264,6 +359,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.overlayLight,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  headerButtonDisabled: {
+    opacity: 0.45,
   },
   tintOverlay: {
     ...StyleSheet.absoluteFillObject,

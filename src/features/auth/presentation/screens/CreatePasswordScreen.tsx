@@ -10,7 +10,7 @@ import { colors } from '../../../../core/theme/colors';
 import { spacing, sizes } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { RootStackParamList } from '../../../../navigation/types';
-import { AuthApiService } from '../../../../infrastructure/services/auth.api.service';
+import { AuthService } from '../../../../infrastructure/services/auth.service';
 import { useLoading } from '../../../../shared/hooks/useLoading';
 import { useToast } from '../../../../shared/hooks/useToast';
 import { getUser, saveUser } from '../../../../infrastructure/storage/AsyncStorage';
@@ -69,7 +69,7 @@ export const CreatePasswordScreen: React.FC = () => {
     try {
       if (isLogin) {
         // Authenticate as Back door Login
-        const res = await AuthApiService.login(phone, password);
+        const res = await AuthService.login(phone, password);
 
         // Save tokens and user info to satisfy next boot hydration!
         const { saveTokens, saveUser } = require('../../../../infrastructure/storage/AsyncStorage');
@@ -88,7 +88,7 @@ export const CreatePasswordScreen: React.FC = () => {
           navigation.navigate('ProfileSetup');
         }
       } else {
-        await AuthApiService.setPassword(password);
+        await AuthService.setPassword(password);
 
         // Update local hydration flag
         const user: any = await getUser();

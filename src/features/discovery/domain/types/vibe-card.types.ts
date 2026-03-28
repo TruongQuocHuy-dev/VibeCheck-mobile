@@ -20,12 +20,19 @@ export interface Candidate {
   _id: string;
   fullName?: string;
   displayName: string;
+  gender?: 'male' | 'female' | null;
   avatar: string | null;
   bio: string | null;
   vibes: string[];
   birthYear: number | null;
   photos: string[];  // Extra photos for card detail
   hasLikedMe?: boolean;
+}
+
+export interface DiscoveryFilters {
+  minAge: number;
+  maxAge: number;
+  gender: 'all' | 'male' | 'female';
 }
 
 /**

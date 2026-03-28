@@ -9,7 +9,6 @@ import {
   ImageBackground,
   ActivityIndicator,
   DeviceEventEmitter,
-  InteractionManager,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useIsFocused, useFocusEffect } from '@react-navigation/native';
@@ -17,18 +16,33 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useDiscovery } from '../../application/hooks/useDiscovery';
 import type { Candidate } from '../../domain/types/vibe-card.types';
+import type { DiscoveryFilters } from '../../domain/types/vibe-card.types';
 import { spacing } from '../../../../core/theme/spacing';
 import { colors } from '../../../../core/theme/colors';
 import { typography } from '../../../../core/theme';
+import { DiscoveryFilterSheet } from '../components/DiscoveryFilterSheet';
+import { EmptyState } from '../../../../shared/components/feedback/Empty';
 
 const { width, height } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.85;
 
 export const DiscoveryScreen: React.FC = () => {
-  const { candidates, handleLike, handleSkip, matchResult, isSwiping, dismissMatch, refreshCandidates, loading } = useDiscovery();
+  const {
+    candidates,
+    handleLike,
+    handleSkip,
+    matchResult,
+    filters,
+    updateFilters,
+    isSwiping,
+    dismissMatch,
+    refreshCandidates,
+    loading,
+  } = useDiscovery();
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
+  const [isFilterSheetVisible, setIsFilterSheetVisible] = React.useState(false);
 
   const CURRENT_YEAR = new Date().getFullYear();
 
@@ -57,24 +71,63 @@ export const DiscoveryScreen: React.FC = () => {
     };
   }, [dismissMatch]);
 
+  React.useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('discovery_filters_changed', (nextFilters: DiscoveryFilters) => {
+      if (!nextFilters) return;
+      updateFilters(nextFilters);
+    });
+
+    return () => {
+      sub.remove();
+    };
+  }, [updateFilters]);
+
   useFocusEffect(
     React.useCallback(() => {
       let active = true;
+      const ric = (globalThis as any).requestIdleCallback;
+      const cancelRic = (globalThis as any).cancelIdleCallback;
 
-      InteractionManager.runAfterInteractions(() => {
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      let idleId: number | null = null;
+
+      const runRefresh = () => {
         if (!active) return;
         refreshCandidates();
-      });
+      };
+
+      if (typeof ric === 'function') {
+        idleId = ric(runRefresh);
+      } else {
+        timeoutId = setTimeout(runRefresh, 0);
+      }
 
       return () => {
         active = false;
+        if (idleId !== null && typeof cancelRic === 'function') {
+          cancelRic(idleId);
+        }
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
       };
     }, [refreshCandidates])
   );
 
   const handleCardPress = (index: number) => {
-    navigation.navigate('DiscoveryDetail', { candidates, initialIndex: index });
+    navigation.navigate('DiscoveryDetail', { candidates, initialIndex: index, filters });
   };
+
+  const handleApplyFilters = React.useCallback((nextFilters: DiscoveryFilters) => {
+    updateFilters(nextFilters);
+  }, [updateFilters]);
+
+  const filterLabel =
+    filters.gender === 'all'
+      ? `${filters.minAge}-${filters.maxAge} · Tất cả`
+      : filters.gender === 'male'
+        ? `${filters.minAge}-${filters.maxAge} · Nam`
+        : `${filters.minAge}-${filters.maxAge} · Nữ`;
 
   const renderCardItem = (item: Candidate, index: number) => {
     const age = item.birthYear ? CURRENT_YEAR - item.birthYear : null;
@@ -137,14 +190,17 @@ export const DiscoveryScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>VIBECHECK<Text style={styles.headerSubtitle}></Text></Text>
+          <View>
+            <Text style={styles.headerTitle}>VIBECHECK</Text>
+            <Text style={styles.filterLabel}>{filterLabel}</Text>
+          </View>
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.notificationButton} onPress={() => navigation.navigate('Notifications')}>
             <Icon name="notifications-outline" size={20} color={colors.white} />
             <View style={styles.notificationBadge} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.menuButton}>
+          <TouchableOpacity style={styles.menuButton} onPress={() => setIsFilterSheetVisible(true)}>
             <Icon name="options-outline" size={20} color={colors.white} />
           </TouchableOpacity>
         </View>
@@ -165,15 +221,20 @@ export const DiscoveryScreen: React.FC = () => {
         ) : candidates.length > 0 ? (
           renderCardItem(candidates[0], 0)
         ) : (
-          <View style={styles.centerContent}>
-            <Text style={styles.emptyEmoji}>✨</Text>
-            <Text style={styles.emptyTitle}>Hết người rồi!</Text>
-            <Text style={styles.emptySubtitle}>
-              {'Bạn đã xem qua tất cả mọi người trong khu vực.\nQuay lại sau nhé 💫'}
-            </Text>
-          </View>
+          <EmptyState
+            emoji="✨"
+            title="Hết người rồi!"
+            subtitle={'Bạn đã xem qua tất cả mọi người trong khu vực.\nQuay lại sau nhé 💫'}
+          />
         )}
       </View>
+
+      <DiscoveryFilterSheet
+        visible={isFilterSheetVisible}
+        filters={filters}
+        onClose={() => setIsFilterSheetVisible(false)}
+        onApply={handleApplyFilters}
+      />
     </SafeAreaView>
   );
 };
@@ -202,6 +263,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.neonCyan,
     letterSpacing: 0.5,
+  },
+  filterLabel: {
+    marginTop: 2,
+    fontSize: typography.sizes.xs,
+    color: colors.textOpacity60,
+    letterSpacing: 0.8,
   },
   headerSubtitle: {
     color: colors.white,
@@ -369,20 +436,5 @@ const styles = StyleSheet.create({
     color: colors.textOpacity60,
     fontSize: typography.sizes.sm,
     marginTop: spacing.sm,
-  },
-  emptyEmoji: {
-    fontSize: 56,
-  },
-  emptyTitle: {
-    fontSize: typography.sizes.xl,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: typography.sizes.md,
-    color: colors.textOpacity60,
-    textAlign: 'center',
-    lineHeight: 22,
   },
 });

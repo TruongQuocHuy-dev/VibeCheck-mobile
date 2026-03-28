@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchCandidates, submitSwipe } from '../../data/discovery.service';
-import type { Candidate, MatchResult } from '../../domain/types/vibe-card.types';
+import type { Candidate, MatchResult, DiscoveryFilters } from '../../domain/types/vibe-card.types';
 import { onSocketEvent, offSocketEvent } from '../../../../infrastructure/services/socket.service';
 
 interface UseDiscoveryReturn {
@@ -9,9 +9,11 @@ interface UseDiscoveryReturn {
   error: string | null;
   currentCandidate: Candidate | undefined;
   matchResult: MatchResult | null;
+  filters: DiscoveryFilters;
   isSwiping: boolean;
   handleLike: () => Promise<void>;
   handleSkip: () => Promise<void>;
+  updateFilters: (nextFilters: DiscoveryFilters) => void;
   refreshCandidates: () => Promise<void>;
   dismissMatch: () => void;
 }
@@ -22,6 +24,7 @@ export const useDiscovery = (): UseDiscoveryReturn => {
   const [error, setError] = useState<string | null>(null);
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
   const [matchQueue, setMatchQueue] = useState<NonNullable<MatchResult['match']>[]>([]);
+  const [filters, setFilters] = useState<DiscoveryFilters>({ minAge: 18, maxAge: 40, gender: 'all' });
   const [isSwiping, setIsSwiping] = useState(false);
   const isFetchingRef = useRef(false);
   const lastSilentFetchAtRef = useRef(0);
@@ -63,7 +66,7 @@ export const useDiscovery = (): UseDiscoveryReturn => {
     }
 
     try {
-      const data = await fetchCandidates();
+      const data = await fetchCandidates(filters);
       setCandidates((prev) => (isSameCandidateList(prev, data) ? prev : data));
     } catch (err: any) {
       setError(err?.message ?? 'Không thể tải danh sách.');
@@ -73,7 +76,7 @@ export const useDiscovery = (): UseDiscoveryReturn => {
         setLoading(false);
       }
     }
-  }, [isSameCandidateList]);
+  }, [isSameCandidateList, filters]);
 
   useEffect(() => {
     loadCandidates();
@@ -143,6 +146,27 @@ export const useDiscovery = (): UseDiscoveryReturn => {
 
   const handleLike = useCallback(() => swipe('like'), [swipe]);
   const handleSkip = useCallback(() => swipe('dislike'), [swipe]);
+  const updateFilters = useCallback((nextFilters: DiscoveryFilters) => {
+    const normalizedMin = Math.max(18, nextFilters.minAge);
+    const normalizedMax = Math.max(normalizedMin + 1, nextFilters.maxAge || 40);
+    const normalized: DiscoveryFilters = {
+      minAge: normalizedMin,
+      maxAge: normalizedMax,
+      gender: nextFilters.gender,
+    };
+
+    setFilters((prev) => {
+      if (
+        prev.gender === normalized.gender
+        && prev.minAge === normalized.minAge
+        && prev.maxAge === normalized.maxAge
+      ) {
+        return prev;
+      }
+
+      return normalized;
+    });
+  }, []);
   const refreshCandidates = useCallback(() => loadCandidates(true), [loadCandidates]);
   const dismissMatch = useCallback(() => {
     setMatchResult(null);
@@ -155,9 +179,11 @@ export const useDiscovery = (): UseDiscoveryReturn => {
     error,
     currentCandidate,
     matchResult,
+    filters,
     isSwiping,
     handleLike,
     handleSkip,
+    updateFilters,
     refreshCandidates,
     dismissMatch,
   };

@@ -1,29 +1,51 @@
 import { useState, useEffect } from 'react';
 import { UseProfileSetupReturn } from '../../domain/types/profile-setup.types';
-import { ProfileService } from '../../infrastructure/services/profile.service';
 import { profileSchema } from '../../domain/validators/profile.validator';
 import { getUser, saveUser } from '../../../../infrastructure/storage/AsyncStorage';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { ProfileService } from '../../../../infrastructure/services/profile.service';
 
 /**
  * Custom hook managing the state of the ProfileSetup Screen workflows.
  * @param onComplete - callback executed upon successful form submission.
  */
 export const useProfileSetup = (onComplete?: () => void): UseProfileSetupReturn => {
+  const [fullName, setFullName] = useState('');
   const [nickname, setNickname] = useState('');
+  const [gender, setGender] = useState<'male' | 'female' | ''>('');
   const [birthYear, setBirthYear] = useState('');
   const [avatarUri, setAvatarUri] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{ nickname?: string; birthYear?: string }>({});
+  const [errors, setErrors] = useState<{
+    fullName?: string;
+    nickname?: string;
+    gender?: string;
+    birthYear?: string;
+  }>({});
 
   // Real-time validation effect
   useEffect(() => {
-    const newErrors: { nickname?: string; birthYear?: string } = {};
+    const newErrors: {
+      fullName?: string;
+      nickname?: string;
+      gender?: string;
+      birthYear?: string;
+    } = {};
+
+    const fullNameCheck = profileSchema.shape.fullName.safeParse(fullName);
+    if (!fullNameCheck.success && fullName.length > 0) {
+      newErrors.fullName = fullNameCheck.error.issues[0].message;
+    }
 
     const nickCheck = profileSchema.shape.nickname.safeParse(nickname);
     if (!nickCheck.success && nickname.length > 0) {
       newErrors.nickname = nickCheck.error.issues[0].message;
+    }
+
+    const genderCheck = profileSchema.shape.gender.safeParse(gender);
+    if (!genderCheck.success && gender.length > 0) {
+      newErrors.gender = genderCheck.error.issues[0].message;
     }
 
     const birthCheck = profileSchema.shape.birthYear.safeParse(birthYear);
@@ -32,7 +54,7 @@ export const useProfileSetup = (onComplete?: () => void): UseProfileSetupReturn 
     }
 
     setErrors(newErrors);
-  }, [nickname, birthYear]);
+  }, [fullName, nickname, gender, birthYear]);
 
   const handlePickAvatar = async () => {
     try {
@@ -54,9 +76,15 @@ export const useProfileSetup = (onComplete?: () => void): UseProfileSetupReturn 
     setError(null);
     try {
       // Validate with Zod
-      profileSchema.parse({ nickname, birthYear, avatarUri });
+      profileSchema.parse({ fullName, nickname, gender, birthYear, avatarUri });
       
-      await ProfileService.createProfile({ nickname, birthYear, avatarUri });
+      await ProfileService.createProfile({
+        fullName,
+        nickname: nickname.trim() || fullName.trim(),
+        gender: gender as 'male' | 'female',
+        birthYear,
+        avatarUri,
+      });
       
       try {
         const user = await getUser();
@@ -83,14 +111,22 @@ export const useProfileSetup = (onComplete?: () => void): UseProfileSetupReturn 
   };
 
   return {
+    fullName,
     nickname,
+    gender,
     birthYear,
     avatarUri,
+    setFullName,
     setNickname,
+    setGender,
     setBirthYear,
     handlePickAvatar,
     handleSubmit,
     errors,
+    isFormValid:
+      fullName.trim().length > 0 &&
+      gender.length > 0 &&
+      birthYear.length === 4,
     loading,
     error,
   };

@@ -14,7 +14,7 @@ import { useVerifyOtp } from '../../application/hooks/useVerifyOtp';
 import { useToast } from '../../../../shared/hooks/useToast';
 import { useLoading } from '../../../../shared/hooks/useLoading';
 
-import { AuthApiService } from '../../../../infrastructure/services/auth.api.service';
+import { AuthService } from '../../../../infrastructure/services/auth.service';
 import { PhoneInput } from '../components/PhoneInput';
 import { OtpInputGroup } from '../components/OtpInputGroup';
 import { OtpScreenProps } from '../../domain/types/otp.types';
@@ -82,7 +82,7 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({ onLoginSuccess }) => {
     if (step === 'PHONE') {
       setCheckLoading(true);
       try {
-        const checkRes = await AuthApiService.checkPhone(phoneNumber);
+        const checkRes = await AuthService.checkPhone(phoneNumber);
         if (checkRes.exists && checkRes.hasPassword) {
           // It is a Login! Save local flag then navigate to CreatePassword-acting Login!
           const { saveUser } = require('../../../../infrastructure/storage/AsyncStorage');

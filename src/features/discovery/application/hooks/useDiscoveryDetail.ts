@@ -8,7 +8,7 @@ import {
   interpolate,
   interpolateColor,
 } from 'react-native-reanimated';
-import { submitSwipe } from '../../data/discovery.service';
+import { submitSwipe, undoDislikeSwipe } from '../../data/discovery.service';
 import type { Candidate, MatchResult } from '../../domain/types/vibe-card.types';
 import { onSocketEvent, offSocketEvent } from '../../../../infrastructure/services/socket.service';
 
@@ -26,6 +26,8 @@ interface UseDiscoveryDetailReturn {
   likeStyle: ReturnType<typeof useAnimatedStyle>;
   matchResult: MatchResult | null;
   isSwiping: boolean;
+  canUndoDislike: boolean;
+  undoLastDislike: () => Promise<boolean>;
   dismissMatch: () => void;
 }
 
@@ -38,6 +40,8 @@ export const useDiscoveryDetail = (
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
   const [matchQueue, setMatchQueue] = useState<NonNullable<MatchResult['match']>[]>([]);
   const [isSwiping, setIsSwiping] = useState(false);
+  const [canUndoDislike, setCanUndoDislike] = useState(false);
+  const lastDislikedIdRef = useRef<string | null>(null);
 
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -117,6 +121,9 @@ export const useDiscoveryDetail = (
       if (isSwiping || !currentCandidate) return;
 
       if (type === 'like') {
+        lastDislikedIdRef.current = null;
+        setCanUndoDislike(false);
+
         if (currentCandidate.hasLikedMe) {
           // Reciprocal-like candidate: prioritize immediate MatchReveal, no swipe-out animation.
           translateX.value = withTiming(0, { duration: 80 });
@@ -156,6 +163,8 @@ export const useDiscoveryDetail = (
             console.warn('Swipe Like API error:', err);
           });
       } else {
+        lastDislikedIdRef.current = currentCandidate._id;
+        setCanUndoDislike(true);
         animateSwipeOut('dislike');
         submitSwipe(currentCandidate._id, 'dislike').catch((err) =>
           console.warn('Swipe API error:', err)
@@ -239,6 +248,21 @@ export const useDiscoveryDetail = (
     return { transform: [{ scale }] };
   });
 
+  const undoLastDislike = useCallback(async () => {
+    const lastDislikedId = lastDislikedIdRef.current;
+    if (!lastDislikedId || currentIndex <= 0 || isSwiping) {
+      return false;
+    }
+
+    await undoDislikeSwipe(lastDislikedId);
+
+    setCurrentIndex((prev) => Math.max(0, prev - 1));
+    resetAnimation();
+    lastDislikedIdRef.current = null;
+    setCanUndoDislike(false);
+    return true;
+  }, [currentIndex, isSwiping]);
+
   return {
     currentCandidate,
     nextCandidate,
@@ -251,6 +275,8 @@ export const useDiscoveryDetail = (
     likeStyle,
     matchResult,
     isSwiping,
+    canUndoDislike,
+    undoLastDislike,
     dismissMatch: useCallback(() => {
       setMatchResult(null);
       setMatchQueue((prev) => prev.slice(1));

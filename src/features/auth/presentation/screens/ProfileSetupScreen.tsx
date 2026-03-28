@@ -1,16 +1,14 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../../../../core/theme/colors';
-import { spacing, sizes } from '../../../../core/theme/spacing';
+import { spacing, borderRadius } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { useProfileSetup } from '../../application/hooks/useProfileSetup';
 import { ProfileSetupScreenProps } from '../../domain/types/profile-setup.types';
 import { AvatarPicker } from '../components/AvatarPicker';
 import { BorderInput } from '../../../../components/atoms/BorderInput';
-import { GradientButton } from '../../../../components/atoms/GradientButton';
 import { useLoading } from '../../../../shared/hooks/useLoading';
 import { useToast } from '../../../../shared/hooks/useToast';
 
@@ -20,10 +18,12 @@ import { useToast } from '../../../../shared/hooks/useToast';
  */
 export const ProfileSetupScreen: React.FC<ProfileSetupScreenProps> = ({ onComplete }) => {
   const {
+    fullName, setFullName,
     nickname, setNickname,
+    gender, setGender,
     birthYear, setBirthYear,
     avatarUri, handlePickAvatar,
-    handleSubmit, errors, loading, error
+    handleSubmit, errors, loading, error, isFormValid,
   } = useProfileSetup(onComplete);
 
   const { showLoading, hideLoading } = useLoading();
@@ -43,8 +43,6 @@ export const ProfileSetupScreen: React.FC<ProfileSetupScreenProps> = ({ onComple
     }
   }, [error, showToast]);
 
-  const isFormValid = nickname.trim().length > 0 && birthYear.length === 4;
-
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView
@@ -59,7 +57,7 @@ export const ProfileSetupScreen: React.FC<ProfileSetupScreenProps> = ({ onComple
               accessibilityRole="button"
               accessibilityLabel="Quay lại"
             >
-              <Icon name="arrow-left" size={24} color="rgba(255,255,255,0.6)" />
+              <Icon name="arrow-left" size={24} color={colors.textOpacity60} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Tạo Vibe</Text>
 
@@ -82,15 +80,59 @@ export const ProfileSetupScreen: React.FC<ProfileSetupScreenProps> = ({ onComple
           {/* Inputs Section */}
           <View style={styles.inputsSection}>
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Biệt danh</Text>
+              <Text style={styles.inputLabel}>Họ và tên</Text>
+              <BorderInput
+                value={fullName}
+                onChangeText={setFullName}
+                placeholder="Tên thật của bạn"
+                iconName="account"
+                testID="profile-setup-fullname-input"
+              />
+              {errors.fullName && <Text style={styles.errorFieldText}>{errors.fullName}</Text>}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Biệt danh (tùy chọn)</Text>
               <BorderInput
                 value={nickname}
                 onChangeText={setNickname}
-                placeholder="Không cần tên thật"
+                placeholder="Có thể để trống"
                 iconName="at"
                 testID="profile-setup-nickname-input"
               />
               {errors.nickname && <Text style={styles.errorFieldText}>{errors.nickname}</Text>}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Giới tính</Text>
+              <View style={styles.genderRow}>
+                <TouchableOpacity
+                  style={[styles.genderOption, gender === 'male' && styles.genderOptionMaleActive]}
+                  onPress={() => setGender('male')}
+                  testID="profile-setup-gender-male"
+                >
+                  <Icon
+                    name="gender-male"
+                    size={20}
+                    color={gender === 'male' ? colors.bgDark : colors.textPrimary}
+                  />
+                  <Text style={[styles.genderText, gender === 'male' && styles.genderTextActive]}>Nam</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.genderOption, gender === 'female' && styles.genderOptionFemaleActive]}
+                  onPress={() => setGender('female')}
+                  testID="profile-setup-gender-female"
+                >
+                  <Icon
+                    name="gender-female"
+                    size={20}
+                    color={gender === 'female' ? colors.bgDark : colors.textPrimary}
+                  />
+                  <Text style={[styles.genderText, gender === 'female' && styles.genderTextActive]}>Nữ</Text>
+                </TouchableOpacity>
+              </View>
+              {errors.gender && <Text style={styles.errorFieldText}>{errors.gender}</Text>}
             </View>
 
             <View style={styles.inputGroup}>
@@ -126,7 +168,7 @@ export const ProfileSetupScreen: React.FC<ProfileSetupScreenProps> = ({ onComple
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212', // Background Dark Prototype
+    backgroundColor: colors.bgBlack,
   },
   keyboardView: {
     flex: 1,
@@ -149,27 +191,10 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   headerNext: { paddingHorizontal: spacing.sm, paddingVertical: 8 },
-  nextText: { color: colors.neonCyan || '#00F0FF', fontSize: 16, fontWeight: typography.weights.bold },
+  nextText: { color: colors.neonCyan, fontSize: 16, fontWeight: typography.weights.bold },
   nextTextDisabled: { color: colors.textSecondary, opacity: 0.5 },
   backButton: {
     padding: spacing.xs,
-  },
-  stepIndicator: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: spacing.sm,
-  },
-  stepDotActive: {
-    width: 32,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.neonPink || '#f20d80',
-  },
-  stepDot: {
-    width: 32,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   inputsSection: {
     gap: spacing.md,
@@ -183,9 +208,41 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 12,
     fontWeight: typography.weights.bold,
-    color: 'rgba(255,255,255,0.4)',
+    color: colors.iconMuted,
     textTransform: 'uppercase',
     marginLeft: 4,
+  },
+  genderRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  genderOption: {
+    flex: 1,
+    height: 54,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.cardDark,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  genderOptionMaleActive: {
+    backgroundColor: colors.neonCyan,
+    borderColor: colors.neonCyan,
+  },
+  genderOptionFemaleActive: {
+    backgroundColor: colors.neonPink,
+    borderColor: colors.neonPink,
+  },
+  genderText: {
+    color: colors.textPrimary,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+  },
+  genderTextActive: {
+    color: colors.bgDark,
   },
   submitSection: {
     paddingBottom: spacing.lg,
@@ -194,18 +251,12 @@ const styles = StyleSheet.create({
 
   footerInfo: {
     fontSize: 10,
-    color: 'rgba(255,255,255,0.3)',
+    color: colors.placeholder,
     textAlign: 'center',
     marginTop: spacing.xs,
   },
-  errorText: {
-    color: '#FF4D4D',
-    fontSize: 12,
-    marginTop: 4,
-    marginLeft: 4,
-  },
   errorFieldText: {
-    color: '#FF4D4D',
+    color: colors.error,
     fontSize: 11,
     marginTop: 2,
     marginLeft: 4,

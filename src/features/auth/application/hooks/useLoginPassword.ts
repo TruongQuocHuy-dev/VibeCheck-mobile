@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AuthApiService } from '../../../../infrastructure/services/auth.api.service';
+import { AuthService } from '../../../../infrastructure/services/auth.service';
 import { saveTokens, saveUser } from '../../../../infrastructure/storage/AsyncStorage';
 import { passwordSchema } from '../../domain/validators/otp.validator';
 
@@ -15,7 +15,7 @@ export const useLoginPassword = (onSuccess: (result: any) => void) => {
     setError(null);
     try {
       passwordSchema.parse(password);
-      const result = await AuthApiService.login(phone, password);
+      const result = await AuthService.login(phone, password);
       await saveTokens(result.accessToken, result.refreshToken);
       await saveUser({
         ...result.user,

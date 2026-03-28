@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FirebaseService, PhoneConfirmation } from '../../../../infrastructure/services/firebase.service';
-import { AuthApiService } from '../../../../infrastructure/services/auth.api.service';
+import { AuthService } from '../../../../infrastructure/services/auth.service';
 import { saveTokens, saveUser } from '../../../../infrastructure/storage/AsyncStorage';
 import { otpSchema } from '../../domain/validators/otp.validator';
 
@@ -34,7 +34,7 @@ export const useVerifyOtp = () => {
       if (!idToken) throw new Error('Không lấy được token từ Firebase.');
 
       // 3. Send to backend → receive app JWT
-      const result = await AuthApiService.register(idToken);
+      const result = await AuthService.register(idToken);
 
       // 4. Persist tokens locally
       await saveTokens(result.accessToken, result.refreshToken);
