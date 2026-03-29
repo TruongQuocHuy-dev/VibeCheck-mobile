@@ -160,15 +160,13 @@ export const DiscoveryDetailScreen: React.FC = () => {
     showLoading('Dang gui bao cao...');
     reportCandidate(userId, 'unsafe_behavior')
       .then(() => {
+        swipe('dislike');
         showToast('Da tiep nhan bao cao. Cam on ban.', 'success');
       })
       .catch((error: any) => {
         showToast(error?.message || 'Khong the bao cao. Vui long thu lai.', 'error');
-      })
-      .finally(() => {
-        hideLoading();
       });
-  }, [currentCandidate?._id, showLoading, hideLoading, showToast]);
+  }, [currentCandidate?._id, swipe, showLoading, showToast]);
 
   const handleUndoDislike = React.useCallback(() => {
     showLoading('Dang hoan tac...');

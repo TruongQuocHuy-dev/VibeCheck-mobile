@@ -8,11 +8,14 @@ import {
   interpolate,
   interpolateColor,
 } from 'react-native-reanimated';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { submitSwipe, undoDislikeSwipe } from '../../data/discovery.service';
 import type { Candidate, MatchResult } from '../../domain/types/vibe-card.types';
 import { onSocketEvent, offSocketEvent } from '../../../../infrastructure/services/socket.service';
 
 const { width } = Dimensions.get('window');
+const MAX_UNDO_PER_WEEK = 5;
+const UNDO_STORAGE_KEY = '@vibecheck_undo_timestamps';
 
 interface UseDiscoveryDetailReturn {
   currentCandidate: Candidate | undefined;
@@ -29,6 +32,7 @@ interface UseDiscoveryDetailReturn {
   canUndoDislike: boolean;
   undoLastDislike: () => Promise<boolean>;
   dismissMatch: () => void;
+  undoCountRemaining: number;
 }
 
 export const useDiscoveryDetail = (
@@ -41,6 +45,10 @@ export const useDiscoveryDetail = (
   const [matchQueue, setMatchQueue] = useState<NonNullable<MatchResult['match']>[]>([]);
   const [isSwiping, setIsSwiping] = useState(false);
   const [canUndoDislike, setCanUndoDislike] = useState(false);
+  
+  const [undoTimestamps, setUndoTimestamps] = useState<number[]>([]);
+  const [isUndoReady, setIsUndoReady] = useState(false);
+  
   const lastDislikedIdRef = useRef<string | null>(null);
 
   const translateX = useSharedValue(0);
@@ -50,6 +58,28 @@ export const useDiscoveryDetail = (
 
   const currentCandidate = candidates[currentIndex];
   const nextCandidate = candidates[currentIndex + 1];
+
+  useEffect(() => {
+    AsyncStorage.getItem(UNDO_STORAGE_KEY).then(val => {
+      if (val) {
+        try {
+          const parsed = JSON.parse(val);
+          if (Array.isArray(parsed)) {
+            const now = Date.now();
+            const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;
+            const valid = parsed.filter(t => typeof t === 'number' && t > oneWeekAgo);
+            setUndoTimestamps(valid);
+            if (valid.length !== parsed.length) {
+              AsyncStorage.setItem(UNDO_STORAGE_KEY, JSON.stringify(valid));
+            }
+          }
+        } catch (e) {
+          console.error('Failed to parse undo timestamps', e);
+        }
+      }
+      setIsUndoReady(true);
+    });
+  }, []);
 
   const enqueueMatch = useCallback((match: MatchResult['match']) => {
     if (!match) return;
@@ -62,7 +92,7 @@ export const useDiscoveryDetail = (
         return prev;
       }
 
-      return [...prev, match];
+        return [...prev, match];
     });
   }, [matchResult?.match?.conversationId]);
 
@@ -163,15 +193,21 @@ export const useDiscoveryDetail = (
             console.warn('Swipe Like API error:', err);
           });
       } else {
-        lastDislikedIdRef.current = currentCandidate._id;
-        setCanUndoDislike(true);
+        if (isUndoReady && undoTimestamps.length < MAX_UNDO_PER_WEEK) {
+          lastDislikedIdRef.current = currentCandidate._id;
+          setCanUndoDislike(true);
+        } else {
+          lastDislikedIdRef.current = null;
+          setCanUndoDislike(false); // Max undo reached
+        }
+
         animateSwipeOut('dislike');
         submitSwipe(currentCandidate._id, 'dislike').catch((err) =>
           console.warn('Swipe API error:', err)
         );
       }
     },
-    [currentCandidate, isSwiping, animateSwipeOut, translateX, rotate, enqueueMatch]
+    [currentCandidate, isSwiping, animateSwipeOut, translateX, rotate, enqueueMatch, isUndoReady, undoTimestamps.length]
   );
 
   const panResponder = useRef(
@@ -250,18 +286,32 @@ export const useDiscoveryDetail = (
 
   const undoLastDislike = useCallback(async () => {
     const lastDislikedId = lastDislikedIdRef.current;
-    if (!lastDislikedId || currentIndex <= 0 || isSwiping) {
+    if (
+      !lastDislikedId || 
+      currentIndex <= 0 || 
+      isSwiping || 
+      !isUndoReady || 
+      undoTimestamps.length >= MAX_UNDO_PER_WEEK
+    ) {
       return false;
     }
 
-    await undoDislikeSwipe(lastDislikedId);
-
-    setCurrentIndex((prev) => Math.max(0, prev - 1));
-    resetAnimation();
-    lastDislikedIdRef.current = null;
-    setCanUndoDislike(false);
-    return true;
-  }, [currentIndex, isSwiping]);
+    try {
+      await undoDislikeSwipe(lastDislikedId);
+      
+      const newTimestamps = [...undoTimestamps, Date.now()];
+      setUndoTimestamps(newTimestamps);
+      AsyncStorage.setItem(UNDO_STORAGE_KEY, JSON.stringify(newTimestamps));
+      
+      setCurrentIndex((prev) => Math.max(0, prev - 1));
+      resetAnimation();
+      lastDislikedIdRef.current = null;
+      setCanUndoDislike(false);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }, [currentIndex, isSwiping, isUndoReady, undoTimestamps]);
 
   return {
     currentCandidate,
@@ -281,5 +331,6 @@ export const useDiscoveryDetail = (
       setMatchResult(null);
       setMatchQueue((prev) => prev.slice(1));
     }, []),
+    undoCountRemaining: Math.max(0, MAX_UNDO_PER_WEEK - undoTimestamps.length),
   };
 };

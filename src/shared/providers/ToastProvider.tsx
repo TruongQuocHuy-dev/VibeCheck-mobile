@@ -55,7 +55,7 @@ export const ToastProvider = ({ children }: ToastProviderProps) => {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <ToastView visible={visible} toast={toast} />
+      <ToastView visible={visible} toast={toast} onDismiss={hideToast} />
     </ToastContext.Provider>
   );
 };

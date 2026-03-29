@@ -30,6 +30,12 @@ export const useCreateVibe = () => {
   const [isSearchingMusic, setIsSearchingMusic] = useState(false);
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
 
+  // New UI states
+  const [currentMode, setCurrentMode] = useState<'LIVE' | 'VIBE' | 'REEL'>('VIBE');
+  const [intensity, setIntensity] = useState(0.6); // Default 60% like the mockup
+  const [isFlashOn, setIsFlashOn] = useState(false);
+  const [activeFilterId, setActiveFilterId] = useState<string | null>(null);
+
   const captionLength = caption.length;
 
   useEffect(() => {
@@ -109,6 +115,18 @@ export const useCreateVibe = () => {
     setSelectedDurationId(durationId);
   }, []);
 
+  const toggleFlash = useCallback(() => {
+    setIsFlashOn(prev => !prev);
+  }, []);
+
+  const changeMode = useCallback((mode: 'LIVE' | 'VIBE' | 'REEL') => {
+    setCurrentMode(mode);
+  }, []);
+
+  const applyFilter = useCallback((filterId: string) => {
+    setActiveFilterId(prev => prev === filterId ? null : filterId);
+  }, []);
+
   const handleSubmit = useCallback(async () => {
     if (!canSubmit || !imageAsset?.uri) return;
 
@@ -169,5 +187,14 @@ export const useCreateVibe = () => {
     handleSubmit,
     setSearchKeyword,
     playingTrackUrl,
+    // New UI logic
+    currentMode,
+    intensity,
+    isFlashOn,
+    activeFilterId,
+    toggleFlash,
+    changeMode,
+    applyFilter,
+    setIntensity,
   };
 };

@@ -19,11 +19,42 @@ interface MusicOptionCardProps {
   isSelected: boolean;
   onPress: (track: VibeTrack) => void;
   style?: StyleProp<ViewStyle>;
+  variant?: 'card' | 'row';
 }
 
 export const MusicOptionCard: React.FC<MusicOptionCardProps> = memo(
-  ({ track, isSelected, onPress, style }) => {
+  ({ track, isSelected, onPress, style, variant = 'card' }) => {
     const isNoMusic = track.id === 'no-music';
+
+    if (variant === 'row') {
+      return (
+        <Pressable
+          style={[styles.rowWrap, isSelected && styles.rowWrapSelected, style]}
+          onPress={() => onPress(track)}
+        >
+          <View style={[styles.rowCover, isSelected && styles.coverSelected]}>
+            {isNoMusic ? (
+              <Icon name="musical-notes-outline" size={spacing.md} color={colors.textSecondary} />
+            ) : (
+              <ImageBackground source={{ uri: track.coverUrl }} style={styles.coverImage} imageStyle={styles.coverImageInner}>
+                {!!track.previewUrl && (
+                  <View style={styles.playOverlay}>
+                    <Icon name="play" size={spacing.md_sm} color={colors.white} />
+                  </View>
+                )}
+              </ImageBackground>
+            )}
+          </View>
+          <View style={styles.rowText}>
+            <Text style={styles.title} numberOfLines={1}>{track.title}</Text>
+            <Text style={styles.artist} numberOfLines={1}>{track.artist || ' '}</Text>
+          </View>
+          {isSelected && (
+            <Icon name="checkmark-circle" size={spacing.lg} color={colors.neonCyan} />
+          )}
+        </Pressable>
+      );
+    }
 
     return (
       <Pressable style={[styles.wrap, style]} onPress={() => onPress(track)}>
@@ -93,6 +124,35 @@ const styles = StyleSheet.create({
   artist: {
     color: colors.textSecondary,
     fontSize: typography.sizes.xs,
+  },
+  rowWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  rowWrapSelected: {
+    borderColor: colors.neonCyan + '60',
+    backgroundColor: colors.cyanBg,
+  },
+  rowCover: {
+    width: spacing.xl + spacing.xl,
+    height: spacing.xl + spacing.xl,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.overlayBorder,
+    backgroundColor: colors.bgDark,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  rowText: {
+    flex: 1,
+    gap: 2,
   },
 });
 

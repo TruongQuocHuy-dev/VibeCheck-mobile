@@ -35,8 +35,15 @@ export const colors = Object.freeze({
   overlayBorder: 'rgba(255,255,255,0.1)',
   textOpacity60: 'rgba(255,255,255,0.6)',
   textOpacity80: 'rgba(255,255,255,0.8)',
-  gradientDarkStart: '#1A2B2C',
-  gradientDarkEnd: '#1B263B',
+  surfaceLow: '#0D0D18',
+  vibeCyan: '#00F0FF',
+  vibePurple: '#6C63FF',
+  vibeGradientStart: '#00F0FF',
+  vibeGradientEnd: '#6C63FF',
+  whiteOpacity10: 'rgba(255, 255, 255, 0.1)',
+  whiteOpacity80: 'rgba(255, 255, 255, 0.8)',
+  vibePurpleOpacity30: 'rgba(108, 99, 255, 0.3)',
+  vibePurpleOpacity40: 'rgba(108, 99, 255, 0.4)',
 } as const);
 
 export type ColorKey = keyof typeof colors;
