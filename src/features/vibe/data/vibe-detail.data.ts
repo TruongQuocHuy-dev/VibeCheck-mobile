@@ -8,7 +8,7 @@ export const vibeDetailMockData: VibeDetailData = {
   id: '',
   caption: '',
   location: '',
-  expiresIn: '',
+  expiresAt: '',
   backgroundImage: '',
   ownerName: '',
   ownerAvatar: '',
@@ -19,5 +19,4 @@ export const vibeDetailMockData: VibeDetailData = {
   stats: [],
   reactions: [],
   comments: [],
-  viewerBlurAvatars: [],
 };

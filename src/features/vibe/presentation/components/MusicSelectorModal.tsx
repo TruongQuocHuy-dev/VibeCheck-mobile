@@ -92,7 +92,7 @@ export const MusicSelectorModal: React.FC<MusicSelectorModalProps> = ({
 
           <FlatList
             data={tracks}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item, index) => item.id?.toString() || index.toString()}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.trackList}
             keyboardShouldPersistTaps="handled"

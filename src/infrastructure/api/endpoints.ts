@@ -46,6 +46,11 @@ export const ENDPOINTS = {
   VIBE_STORIES: {
     FEED: '/vibe-stories/feed',              // GET: feed of matches' stories
     CREATE: '/vibe-stories',                 // POST: upload photo + music info
+    DELETE: (id: string) => `/vibe-stories/${id}`,
+    REPLY: (id: string) => `/vibe-stories/${id}/reply`,
+    REACT: (id: string) => `/vibe-stories/${id}/react`,
+    VIEW: (id: string) => `/vibe-stories/${id}/view`,
+    INTERACTIONS: (id: string) => `/vibe-stories/${id}/interactions`,
   },
 } as const;
 

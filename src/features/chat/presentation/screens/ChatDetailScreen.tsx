@@ -70,6 +70,18 @@ export const ChatDetailScreen: React.FC = () => {
           <View style={[styles.bubble, item.isMe ? styles.bubbleUser : styles.bubblePartner]}>
             {item.type === 'image' ? (
               <Image source={{ uri: item.content }} style={styles.messageImage} resizeMode="cover" />
+            ) : item.type === 'story_reply' ? (
+              <View style={styles.storyReplyWrapper}>
+                <View style={styles.storyReferenceCard}>
+                  {item.storyReference?.imageUrl && (
+                    <Image source={{ uri: item.storyReference.imageUrl }} style={styles.storyThumb} />
+                  )}
+                  <Text style={styles.storyReplyTitle} numberOfLines={1}>
+                    Đã trả lời Vibe
+                  </Text>
+                </View>
+                <Text style={styles.messageText}>{item.content}</Text>
+              </View>
             ) : (
               <Text style={styles.messageText}>{item.content}</Text>
             )}
@@ -386,5 +398,29 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.4)',
     fontSize: 14,
     fontStyle: 'italic',
+  },
+  storyReplyWrapper: {
+    gap: 8,
+  },
+  storyReferenceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    padding: 6,
+    gap: 8,
+    marginBottom: 4,
+  },
+  storyThumb: {
+    width: 32,
+    height: 48,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  storyReplyTitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontStyle: 'italic',
+    flexShrink: 1,
   },
 });

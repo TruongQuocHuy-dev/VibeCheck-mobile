@@ -14,6 +14,8 @@ export type RootStackParamList = {
     userId: string;
     stories: any[];
     initialIndex?: number;
+    userName?: string;
+    userAvatar?: string;
   };
   MatchProfile: {
     id: string;

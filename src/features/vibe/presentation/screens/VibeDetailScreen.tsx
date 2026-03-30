@@ -10,6 +10,8 @@ import {
   View,
   Animated,
   ActivityIndicator,
+  Modal,
+  FlatList,
 } from 'react-native';
 import Video from 'react-native-video';
 import LinearGradient from 'react-native-linear-gradient';
@@ -19,6 +21,10 @@ import { colors } from '../../../../core/theme/colors';
 import { borderRadius, spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { useVibeDetail } from '../../application/hooks/useVibeDetail';
+import { VibeStoryHeader } from '../components/VibeStoryHeader';
+import { VibeStoryProgressBar } from '../components/VibeStoryProgressBar';
+import { VibeReactionsBar } from '../components/VibeReactionsBar';
+import { VibeInteractionModal } from '../components/VibeInteractionModal';
 
 export const VibeDetailScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -41,26 +47,24 @@ export const VibeDetailScreen: React.FC = () => {
     handleNext,
     handlePrev,
     isMuted,
+    isOwner,
+    interactions,
+    viewCount,
+    isInteractionsLoading,
+    showInteractions,
+    setShowInteractions,
+    fetchInteractions,
     toggleMute,
     handlePressIn,
     handlePressOut,
   } = useVibeDetail();
 
-  // Helper to calculate time remaining from expiresAt
-  const getTimeRemaining = (expiresAt: string | Date | null) => {
-    if (!expiresAt) return '24h';
-    const total = Date.parse(expiresAt.toString()) - Date.now();
-    if (total <= 0) return 'Đã hết hạn';
-    const hours = Math.floor(total / (1000 * 60 * 60));
-    if (hours > 0) return `${hours}h còn lại`;
-    const minutes = Math.floor(total / (1000 * 60));
-    return `${minutes}m còn lại`;
-  };
 
   if (!detail) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color={colors.vibeCyan} />
+        <Text style={{ marginTop: spacing.md, color: colors.textSecondary }}>Đang tải Vibe...</Text>
       </View>
     );
   }
@@ -74,65 +78,20 @@ export const VibeDetailScreen: React.FC = () => {
           colors={['rgba(0,0,0,0.65)', 'rgba(0,0,0,0.15)']}
           style={[styles.topOverlay, { paddingTop: insets.top + spacing.xs }]}
         >
-          <View style={styles.progressRow}>
-            {stories.map((_, index) => {
-              let width: any = '0%';
-              if (index < currentIndex) width = '100%';
-              else if (index === currentIndex) {
-                width = progressAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['0%', '100%'],
-                });
-              }
+          <VibeStoryProgressBar
+            stories={stories}
+            currentIndex={currentIndex}
+            progressAnim={progressAnim}
+          />
 
-              return (
-                <View key={index} style={styles.progressTrack}>
-                  <Animated.View style={[styles.progressFill, { width }]} />
-                </View>
-              );
-            })}
-          </View>
-
-          <View style={styles.headerRow}>
-            <TouchableOpacity style={styles.ownerInfo} activeOpacity={0.9} onPress={handleProfilePress}>
-              <Image source={{ uri: detail.ownerAvatar || 'https://via.placeholder.com/150' }} style={styles.ownerAvatar} />
-              <View style={styles.ownerTextWrap}>
-                <View style={styles.ownerNameRow}>
-                  <Text style={styles.ownerName} numberOfLines={1}>{detail.ownerName}</Text>
-                  <Text style={styles.ownerTimeDot}>•</Text>
-                  <Text style={styles.ownerTimeText}>{getTimeRemaining(detail.expiresAt)}</Text>
-                </View>
-                {detail.track && (
-                  <View style={styles.headerMusicWrap}>
-                    <Icon name="musical-note" size={spacing.sm} color={colors.neonCyan} />
-                    <Text style={styles.headerMusicText} numberOfLines={1}>
-                      {detail.track.title} • {detail.track.artist}
-                    </Text>
-                  </View>
-                )}
-                {detail.location && (
-                  <View style={styles.headerMusicWrap}>
-                    <Icon name="location-sharp" size={spacing.sm} color={colors.vibeCyan} />
-                    <Text style={styles.headerMusicText} numberOfLines={1}>
-                      {typeof detail.location === 'object' ? detail.location.area : detail.location}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </TouchableOpacity>
-
-            <View style={styles.headerActions}>
-              <TouchableOpacity style={styles.iconButton} onPress={toggleMute} activeOpacity={0.85}>
-                <Icon name={isMuted ? "volume-mute" : "volume-high"} size={spacing.lg} color={colors.white} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.iconButton} onPress={handleMenuPress} activeOpacity={0.85}>
-                <Icon name="ellipsis-horizontal" size={spacing.lg} color={colors.white} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.iconButton} onPress={handleBack} activeOpacity={0.85}>
-                <Icon name="close" size={spacing.lg} color={colors.white} />
-              </TouchableOpacity>
-            </View>
-          </View>
+          <VibeStoryHeader
+            detail={detail}
+            isMuted={isMuted}
+            toggleMute={toggleMute}
+            handleMenuPress={handleMenuPress}
+            handleBack={handleBack}
+            handleProfilePress={handleProfilePress}
+          />
         </LinearGradient>
 
         {/* Music Video Playback */}
@@ -193,44 +152,47 @@ export const VibeDetailScreen: React.FC = () => {
             <Text style={styles.captionText}>{detail.caption}</Text>
           ) : null}
 
-          <View style={styles.reactionsRow}>
-            {quickReactions.map((item) => {
-              const active = selectedReaction === item.id;
-
-              return (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[styles.reactionButton, active && styles.reactionButtonActive]}
-                  onPress={() => handleReactionPress(item.id)}
-                  activeOpacity={0.88}
-                >
-                  <Icon
-                    name={item.icon}
-                    size={spacing.md}
-                    color={active ? colors.bgDark : colors.textPrimary}
+          {isOwner && (
+            <TouchableOpacity 
+              style={styles.viewerButton} 
+              onPress={() => setShowInteractions(true)}
+            >
+              <View style={styles.viewerIconList}>
+                {interactions.slice(0, 3).map((inter, idx) => (
+                  <Image 
+                    key={inter._id || `viewer-${idx}`} 
+                    source={{ uri: inter.sender?.avatar }} 
+                    style={[styles.viewerTinyAvatar, { marginLeft: idx > 0 ? -spacing.sm : 0, zIndex: 10 - idx }]} 
                   />
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <View style={styles.replyBar}>
-            <View style={styles.replyInputWrap}>
-              <TextInput
-                value={replyInput}
-                onChangeText={setReplyInput}
-                style={styles.replyInput}
-                placeholder="Tra loi vibe..."
-                placeholderTextColor={colors.textOpacity60}
-              />
-              <Icon name="camera-outline" size={spacing.md} color={colors.textOpacity80} />
-            </View>
-
-            <TouchableOpacity style={styles.sendButton} onPress={handleSendReply} activeOpacity={0.9}>
-              <Icon name="send" size={spacing.md_sm} color={colors.bgDark} />
+                ))}
+              </View>
+              <Text style={styles.viewerCount}>
+                {interactions.length > 0 ? `${interactions.length} lượt tương tác` : 'Chưa có tương tác'}
+              </Text>
+              <Icon name="chevron-up" size={spacing.md} color={colors.textOpacity60} />
             </TouchableOpacity>
-          </View>
+          )}
+
+          {!isOwner && (
+            <VibeReactionsBar
+              quickReactions={quickReactions}
+              selectedReaction={selectedReaction}
+              replyInput={replyInput}
+              setReplyInput={setReplyInput}
+              handleReactionPress={handleReactionPress}
+              handleSendReply={handleSendReply}
+            />
+          )}
         </LinearGradient>
+
+        <VibeInteractionModal
+          visible={showInteractions}
+          onClose={() => setShowInteractions(false)}
+          interactions={interactions}
+          viewCount={viewCount}
+          isLoading={isInteractionsLoading}
+          onRefresh={fetchInteractions}
+        />
       </>
     );
   };
@@ -436,6 +398,7 @@ const styles = StyleSheet.create({
   bottomOverlay: {
     paddingHorizontal: spacing.md,
     gap: spacing.sm,
+    zIndex: 10, // Ensure it's on top of touch navigation area
   },
   reactionsRow: {
     flexDirection: 'row',
@@ -485,5 +448,152 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.neonCyan,
+  },
+  viewerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    alignSelf: 'center',
+    gap: 8,
+  },
+  viewerIconList: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  viewerTinyAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: colors.bgDark,
+  },
+  viewerCount: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalDismiss: {
+    flex: 1,
+  },
+  modalContent: {
+    backgroundColor: colors.cardDark,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 12,
+    height: '60%',
+    borderWidth: 1,
+    borderColor: colors.cyanBorder,
+  },
+  modalIndicator: {
+    width: 40,
+    height: 4,
+    backgroundColor: colors.whiteOpacity20,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.overlayBorder,
+  },
+  modalHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  refreshBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 4,
+  },
+  refreshText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  interactionsList: {
+    padding: 20,
+  },
+  interactionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 12,
+    gap: 12,
+  },
+  viewerAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: colors.neonCyan,
+  },
+  interactionInfo: {
+    flex: 1,
+  },
+  viewerName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 2,
+  },
+  interactionText: {
+    fontSize: 13,
+    color: colors.textOpacity60,
+    marginBottom: 4,
+  },
+  reactionsBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  reactionEmojiText: {
+    fontSize: 16,
+  },
+  reactionMoreText: {
+    fontSize: 12,
+    color: colors.textOpacity60,
+    marginLeft: 2,
+  },
+  interactionTimeWrap: {
+    alignItems: 'flex-end',
+  },
+  interactionTime: {
+    fontSize: 11,
+    color: colors.textOpacity60,
+  },
+  emptyInteractionsWrap: {
+    paddingTop: 60,
+    alignItems: 'center',
+    gap: 12,
+  },
+  emptyInteractions: {
+    fontSize: 14,
+    color: colors.textOpacity60,
+    textAlign: 'center',
   },
 });

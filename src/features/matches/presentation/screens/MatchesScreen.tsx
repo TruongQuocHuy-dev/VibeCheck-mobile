@@ -61,8 +61,8 @@ export const MatchesScreen: React.FC = () => {
 
           {hasNewMatches ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {topMatches.map((user) => (
-                <NewMatchItem key={user.listKey} user={user} onPress={handleMatchPress} />
+              {topMatches.map((user, idx) => (
+                <NewMatchItem key={user.listKey || user.id || `match-${idx}`} user={user} onPress={handleMatchPress} />
               ))}
             </ScrollView>
           ) : (
@@ -73,7 +73,7 @@ export const MatchesScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>VIBE TỪ MATCH</Text>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 16 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: spacing.lg }}>
             <OwnVibeStoryCard
               avatar={currentUserAvatar}
               backgroundImage={ownVibeStories[ownVibeStories.length - 1]?.imageUrl || null}
@@ -82,9 +82,9 @@ export const MatchesScreen: React.FC = () => {
               onAddPress={handleAddVibePress}
             />
 
-            {data.matchVibes.map((story) => (
+            {data.matchVibes.map((story, idx) => (
               <MatchVibeStoryCard
-                key={`${story.ownerId}:${story.id}`}
+                key={`${story.ownerId}:${story.id || idx}`}
                 story={story}
                 onPress={handleStoryPress}
               />
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.semiBold,
-    letterSpacing: spacing.xs + 1,
+    letterSpacing: spacing.xs,
     paddingHorizontal: spacing.lg,
   },
   emptyText: {

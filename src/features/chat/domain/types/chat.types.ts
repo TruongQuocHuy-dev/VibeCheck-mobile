@@ -41,7 +41,12 @@ export interface Message {
   conversationId: string;
   sender: ChatUser;
   content: string;
-  type: 'text' | 'image';
+  type: 'text' | 'image' | 'story_reply';
+  storyReference?: {
+    storyId?: string;
+    imageUrl?: string;
+    caption?: string;
+  };
   readBy: string[];
   createdAt: string;
 }

@@ -177,6 +177,8 @@ export const useProfile = () => {
         navigation.navigate('VibeDetail', {
           userId: ownProfileData?._id || ownProfileData?.id,
           stories: ownVibeStories,
+          userName: 'Bạn',
+          userAvatar: ownProfileData?.avatar,
         });
       }
     },
