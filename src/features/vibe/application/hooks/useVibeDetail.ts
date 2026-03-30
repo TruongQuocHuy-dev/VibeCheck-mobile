@@ -3,7 +3,6 @@ import { Animated } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../../navigation/types';
-import { vibeDetailMockData } from '../../data/vibe-detail.data';
 import { useProfile } from '../../../../features/profile/application/hooks/useProfile';
 
 type VibeDetailNav = NativeStackNavigationProp<RootStackParamList>;
@@ -31,6 +30,8 @@ export const useVibeDetail = () => {
   const storyTimer = useRef<any>(null);
 
   const currentStory = stories[currentIndex] || null;
+  const hasMusic = !!(currentStory?.music?.previewUrl);
+  const storyDuration = hasMusic ? 20000 : 15000;
 
   const handleNext = useCallback(() => {
     if (currentIndex < stories.length - 1) {
@@ -58,36 +59,38 @@ export const useVibeDetail = () => {
     progressAnim.setValue(0);
     Animated.timing(progressAnim, {
       toValue: 1,
-      duration: 30000, // 30 seconds per story to match music preview
+      duration: storyDuration,
       useNativeDriver: false,
     }).start();
 
     storyTimer.current = setTimeout(() => {
       handleNext();
-    }, 30000);
+    }, storyDuration);
 
     return () => {
       if (storyTimer.current) clearTimeout(storyTimer.current);
     };
-  }, [currentIndex, currentStory, isPaused, handleNext, progressAnim]);
+  }, [currentIndex, currentStory, isPaused, handleNext, progressAnim, storyDuration]);
 
   const detail = useMemo(() => {
-    if (!currentStory) return vibeDetailMockData;
+    if (!currentStory) return null;
     
     return {
-      ...vibeDetailMockData,
       id: currentStory.id || currentStory._id,
       caption: currentStory.caption || '',
-      location: currentStory.location || 'Hà Nội, Việt Nam',
+      location: currentStory.location || null,
       expiresAt: currentStory.expiresAt,
       backgroundImage: currentStory.imageUrl || currentStory.backgroundImage,
-      track: currentStory.music || vibeDetailMockData.track,
+      track: currentStory.music || null,
       ownerName: params.userId === 'me' 
         ? (ownProfileData?.fullName || ownProfileData?.displayName || 'Bạn') 
         : (currentStory.ownerName || 'Vibe User'),
       ownerAvatar: params.userId === 'me'
         ? (ownProfileData?.avatar)
         : (currentStory.ownerAvatar || 'https://via.placeholder.com/150'),
+      stats: currentStory.stats || [],
+      reactions: currentStory.reactions || [],
+      comments: currentStory.comments || [],
     };
   }, [currentStory, params.userId, ownProfileData]);
 

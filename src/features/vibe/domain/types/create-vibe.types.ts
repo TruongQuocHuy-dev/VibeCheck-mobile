@@ -4,6 +4,8 @@ export interface VibeTrack {
   artist: string;
   coverUrl?: string;
   previewUrl?: string;
+  startTime?: number; // offset in seconds (0-10)
+  musicDuration?: number; // segment length in seconds (default 20)
 }
 
 export interface VibeDurationOption {
@@ -24,4 +26,6 @@ export interface CreateVibeDraft {
   selectedDurationId: string;
   selectedTrackId?: string;
   location: VibeLocationInfo;
+  startTime?: number;
+  musicDuration?: number;
 }

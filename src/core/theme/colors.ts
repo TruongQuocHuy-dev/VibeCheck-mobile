@@ -44,6 +44,16 @@ export const colors = Object.freeze({
   whiteOpacity80: 'rgba(255, 255, 255, 0.8)',
   vibePurpleOpacity30: 'rgba(108, 99, 255, 0.3)',
   vibePurpleOpacity40: 'rgba(108, 99, 255, 0.4)',
+  vibeOverlay: 'rgba(0, 0, 0, 0.45)',
+  vibeOverlayDark: 'rgba(0, 0, 0, 0.7)',
+  modalBackdrop: 'rgba(0, 0, 0, 0.55)',
+  vibeCardDark: '#1E1E2C',
+  filterVintageStart: 'rgba(160,80,20,0.35)',
+  filterVintageEnd: 'rgba(180,100,40,0.25)',
+  filterExposureStart: 'rgba(255,255,255,0.22)',
+  filterExposureEnd: 'rgba(255,255,255,0)',
+  filterAutoStart: 'rgba(0,240,255,0.10)',
+  filterAutoEnd: 'rgba(108,99,255,0.12)',
 } as const);
 
 export type ColorKey = keyof typeof colors;

@@ -76,7 +76,7 @@ export const useMatches = () => {
             ownerAvatar: group.user.avatar || 'https://via.placeholder.com/150',
             backgroundImage: latestStory.imageUrl,
             expiresIn: '24h',
-            hasLocation: false,
+            hasLocation: !!latestStory.location,
             hasMusic: !!latestStory.music,
             stories: group.stories,
           } as MatchVibeStory;

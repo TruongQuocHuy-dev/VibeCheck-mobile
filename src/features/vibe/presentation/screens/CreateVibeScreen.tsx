@@ -1,8 +1,7 @@
-import React, { useCallback } from 'react';
+import React, { useMemo, useCallback, useRef, useState, useEffect } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
-  ImageBackground,
+  Image,
   Modal,
   StatusBar,
   StyleSheet,
@@ -12,28 +11,56 @@ import {
   View,
   Dimensions,
 } from 'react-native';
+import Video from 'react-native-video';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../../../core/theme/colors';
 import { borderRadius, spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { useToast } from '../../../../shared/hooks/useToast';
 import { useCreateVibe } from '../../application/hooks/useCreateVibe';
+import { useVibeCameraView } from '../../application/hooks/useVibeCameraView';
 import { VibeCaptureButton } from '../components/VibeCaptureButton';
-import { MusicOptionCard } from '../components/MusicOptionCard';
+import { VibeCameraHeader } from '../components/VibeCameraHeader';
+import { VibeModeSwitcher } from '../components/VibeModeSwitcher';
+import { MusicSelectorModal } from '../components/MusicSelectorModal';
 
-const { width } = Dimensions.get('window');
+// vision-camera is imported conditionally since build may not have it yet
+let Camera: any;
+let useCameraDevice: any;
+try {
+  const visionCamera = require('react-native-vision-camera');
+  Camera = visionCamera.Camera;
+  useCameraDevice = visionCamera.useCameraDevice;
+} catch {
+  Camera = null;
+}
+
+import { VIBE_FILTERS } from '../../data/vibe-filters.data';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const FLASH_ICONS: Record<string, string> = {
+  off: 'flash-off',
+  on: 'flash',
+  auto: 'flash-auto',
+};
 
 export const CreateVibeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const [showMusicModal, setShowMusicModal] = React.useState(false);
+  const [currentPlayTime, setCurrentPlayTime] = React.useState(0);
 
+  // ── Toast ──
+  const { showToast } = useToast();
+
+  // ── form / upload ──
   const {
-    previewPhoto,
-    currentMode,
-    intensity,
-    isFlashOn,
     activeFilterId,
+    intensity,
+    previewPhoto,
+    hasImage,
     tracks,
     selectedTrackId,
     isSearchingMusic,
@@ -41,469 +68,634 @@ export const CreateVibeScreen: React.FC = () => {
     selectedTrack,
     canSubmit,
     isSubmitting,
-    toggleFlash,
-    changeMode,
-    applyFilter,
+    caption,
+    captionLength,
+    maxCaptionLength,
+    location,
+    playingTrackId,
+    playingTrackUrl,
+    startTime,
+    musicDuration,
+    setStartTime,
     handleClose,
     handlePickImage,
+    handleCapturedPhoto,
     handleSubmit,
     handleTrackSelect,
+    handleStopPreview,
+    handleCaptionChange,
+    vibeMode,
+    switchMode,
+    fetchDefaultTracks,
+    applyFilter,
     setSearchKeyword,
-  } = useCreateVibe();
+  } = useCreateVibe(showToast);
 
-  const handleMusicConfirm = useCallback(() => {
+  // ── camera ──
+  const videoRef = React.useRef<any>(null);
+  const {
+    cameraRef,
+    device,
+    hasPermission,
+    requestPermission,
+    flash,
+    facing,
+    isCameraReady,
+    capturedPhoto,
+    setIsCameraReady,
+    takePhoto,
+    resetPhoto,
+    toggleFacing,
+    toggleFlash,
+  } = useVibeCameraView();
+
+  const displayUri = capturedPhoto
+    ? `file://${capturedPhoto.path}`
+    : previewPhoto ?? null;
+
+  const showCameraFeed = !displayUri;
+
+  // Playing track's URL for audio
+  const playingUrl = React.useMemo(() => {
+    if (!playingTrackId) return null;
+    return tracks.find((t) => t.id === playingTrackId)?.previewUrl ?? null;
+  }, [playingTrackId, tracks]);
+
+  const handleCapturePress = React.useCallback(async () => {
+    // Already have a photo → submit
+    if (capturedPhoto || previewPhoto) {
+      handleSubmit();
+      return;
+    }
+    // Take photo with in-app camera
+    const photo = await takePhoto();
+    if (photo?.path) {
+      // Register the captured photo with the form hook so handleSubmit can upload it
+      handleCapturedPhoto(photo.path);
+    }
+  }, [capturedPhoto, previewPhoto, handleSubmit, takePhoto, handleCapturedPhoto]);
+
+  const handleRetake = React.useCallback(() => {
+    resetPhoto();
+  }, [resetPhoto]);
+
+  const handleModeSwitch = React.useCallback((mode: 'photo' | 'text') => {
+    switchMode(mode);
+    if (mode === 'text') {
+      resetPhoto();
+    }
+  }, [switchMode, resetPhoto]);
+
+  const openMusicModal = React.useCallback(() => {
+    setShowMusicModal(true);
+    fetchDefaultTracks();
+  }, [fetchDefaultTracks]);
+
+  const handleMusicClose = React.useCallback(() => {
     setShowMusicModal(false);
-  }, []);
+    handleStopPreview();
+  }, [handleStopPreview]);
 
-  const mockPreview = 'https://images.unsplash.com/photo-1514525253361-b83f20ca914a?q=80&w=1000&auto=format&fit=crop';
+  // Sync video to startTime when it changes
+  React.useEffect(() => {
+    if (playingTrackId && videoRef.current) {
+      videoRef.current.seek(startTime);
+      setCurrentPlayTime(startTime);
+    }
+  }, [startTime, playingTrackId]);
+
+  // ── Permission screen ──
+  if (!hasPermission) {
+    return (
+      <View style={styles.permScreen}>
+        <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+        <Icon name="camera-off" size={64} color={colors.textMuted} />
+        <Text style={styles.permTitle}>Cần quyền Camera</Text>
+        <Text style={styles.permSub}>VibeCheck cần truy cập camera để chụp Vibe của bạn.</Text>
+        <TouchableOpacity style={styles.permBtn} onPress={requestPermission}>
+          <Text style={styles.permBtnTxt}>Cấp quyền</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.permCancel} onPress={handleClose}>
+          <Text style={styles.permCancelTxt}>Để sau</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* Ambient Background Glows */}
-      <View style={[styles.ambientGlow, styles.ambientTopLeft]} />
-      <View style={[styles.ambientGlow, styles.ambientBottomRight]} />
+      {/* ── Full-screen loading overlay ── */}
+      <Modal visible={isSubmitting} transparent animationType="fade" statusBarTranslucent>
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color={colors.vibeCyan} />
+            <Text style={styles.loadingTitle}>Đang đăng Vibe...</Text>
+            <Text style={styles.loadingSubtitle}>Vui lòng chờ trong giây lát</Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Hidden audio player */}
+      {playingUrl && (
+        <Video
+          ref={videoRef}
+          source={{ uri: playingUrl }}
+          ignoreSilentSwitch="ignore"
+          playInBackground={false}
+          style={styles.hiddenVideo}
+          repeat={true}
+          progressUpdateInterval={100} // update 10 times a second for smooth animation
+          onProgress={({ currentTime }) => {
+            setCurrentPlayTime(currentTime);
+            // Loop back to startTime if it exceeds the 20s window
+            if (currentTime >= startTime + musicDuration) {
+              videoRef.current?.seek(startTime);
+              setCurrentPlayTime(startTime);
+            }
+          }}
+          onEnd={() => {
+            // Failsafe loop if track ends
+            videoRef.current?.seek(startTime);
+            setCurrentPlayTime(startTime);
+          }}
+        />
+      )}
+
+      {/* Ambient glows */}
+      <View style={[styles.glow, styles.glowTL]} />
+      <View style={[styles.glow, styles.glowBR]} />
 
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        {/* Top Navigation */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.iconButton} onPress={toggleFlash}>
-            <Icon
-              name={isFlashOn ? 'flash' : 'flash-outline'}
-              size={24}
-              color={isFlashOn ? colors.vibeCyan : colors.white}
-            />
-          </TouchableOpacity>
 
-          <Text style={styles.logoText}>VibeCheck</Text>
+        {/* ══ Header ══ */}
+        <VibeCameraHeader
+          flash={flash}
+          facing={facing}
+          toggleFlash={toggleFlash}
+          onFlip={toggleFacing}
+          onClose={handleClose}
+          isLiveCamera={!displayUri && vibeMode === 'photo'}
+        />
 
-          <TouchableOpacity style={styles.iconButton} onPress={handleClose}>
-            <Icon name="close" size={24} color={colors.white} />
-          </TouchableOpacity>
-        </View>
+        {/* ══ Viewfinder ══ */}
+        <View style={styles.vfContainer}>
+          <View style={styles.vfWrapper}>
 
-        {/* Viewfinder Main Area */}
-        <View style={styles.viewfinderContainer}>
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={handlePickImage}
-            style={styles.viewfinderWrapper}
-          >
-            <ImageBackground
-              source={{ uri: previewPhoto || mockPreview }}
-              style={styles.viewfinder}
-              imageStyle={[
-                styles.viewfinderImage,
-                !previewPhoto && styles.viewfinderImageBlur,
-              ]}
-            >
-              <View style={styles.viewfinderOverlay}>
-                {/* Right Side Buttons */}
-                <View style={styles.sideControls}>
-                  <TouchableOpacity
-                    style={[styles.controlButton, activeFilterId === 'vintage' && styles.controlButtonActive]}
-                    onPress={() => applyFilter('vintage')}
-                  >
-                    <Icon name="filter-variant" size={20} color={colors.white} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.controlButton, activeFilterId === 'exposure' && styles.controlButtonActive]}
-                    onPress={() => applyFilter('exposure')}
-                  >
-                    <Icon name="brightness-6" size={20} color={colors.white} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.controlButton, activeFilterId === 'auto' && styles.controlButtonActive]}
-                    onPress={() => applyFilter('auto')}
-                  >
-                    <Icon name="auto-fix" size={20} color={colors.white} />
-                  </TouchableOpacity>
-                </View>
+            {/* Live camera */}
+            {showCameraFeed && Camera && device && (
+              <Camera
+                ref={cameraRef}
+                style={styles.camera}
+                device={device}
+                isActive
+                photo
+                onInitialized={() => setIsCameraReady(true)}
+              />
+            )}
 
-                {/* Left Side Intensity Meter */}
-                <View style={styles.intensityContainer}>
-                  <View style={styles.meterTrack}>
-                    <LinearGradient
-                      colors={[colors.vibeGradientEnd, colors.vibeGradientStart]}
-                      style={[styles.meterFill, { height: `${intensity * 100}%` as any }]}
-                    />
-                  </View>
-                  <Text style={styles.intensityText}>INTENSITY</Text>
-                </View>
-
-                {/* Brackets Decor */}
-                <View style={[styles.bracket, styles.bracketTopLeft]} />
-                <View style={[styles.bracket, styles.bracketTopRight]} />
-                <View style={[styles.bracket, styles.bracketBottomLeft]} />
-                <View style={[styles.bracket, styles.bracketBottomRight]} />
-
-                {/* No photo hint */}
-                {!previewPhoto && (
-                  <View style={styles.tapHint}>
-                    <Icon name="image-plus" size={36} color={colors.whiteOpacity80} />
-                    <Text style={styles.tapHintText}>Chạm để chọn ảnh</Text>
-                  </View>
-                )}
-              </View>
-            </ImageBackground>
-          </TouchableOpacity>
-
-          {/* Selected track chip inside viewfinder area */}
-          {selectedTrack && (
-            <View style={styles.selectedTrackChip}>
-              <Icon name="music-note" size={14} color={colors.vibeCyan} />
-              <Text style={styles.selectedTrackText} numberOfLines={1}>
-                {selectedTrack.title} · {selectedTrack.artist}
-              </Text>
-              <TouchableOpacity onPress={() => setShowMusicModal(true)}>
-                <Icon name="pencil-outline" size={14} color={colors.whiteOpacity80} />
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-
-        {/* Mode Selector */}
-        <View style={styles.modeSelector}>
-          {(['LIVE', 'VIBE', 'REEL'] as const).map((mode) => (
-            <TouchableOpacity
-              key={mode}
-              onPress={() => changeMode(mode)}
-              style={styles.modeItem}
-            >
-              <Text style={[styles.modeText, currentMode === mode && styles.modeTextActive]}>
-                {mode}
-              </Text>
-              {currentMode === mode && <View style={styles.modeActiveLine} />}
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Bottom Actions */}
-        <View style={styles.footer}>
-          {/* Gallery */}
-          <TouchableOpacity style={styles.footerIconButton} onPress={handlePickImage}>
-            <Icon name="image-multiple-outline" size={24} color={colors.whiteOpacity80} />
-          </TouchableOpacity>
-
-          {/* Capture / Post */}
-          {canSubmit ? (
-            <TouchableOpacity
-              style={styles.postButton}
-              onPress={handleSubmit}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color={colors.bgDark} />
+            {/* Captured / gallery photo or Text Mode Background */}
+            {(!!previewPhoto || vibeMode === 'text') && (
+              previewPhoto ? (
+                <Image source={{ uri: previewPhoto }} style={styles.capturedImg} resizeMode="cover" />
               ) : (
-                <>
-                  <Icon name="send" size={22} color={colors.bgDark} />
-                  <Text style={styles.postButtonText}>Đăng</Text>
-                </>
-              )}
+                <LinearGradient
+                  colors={[colors.vibeGradientStart, colors.vibeGradientEnd]}
+                  style={[styles.capturedImg, styles.textModeContainer]}
+                >
+                  <TextInput
+                    style={styles.textModeInput}
+                    placeholder="Bạn đang nghĩ gì?..."
+                    placeholderTextColor={colors.textOpacity60}
+                    value={caption}
+                    onChangeText={handleCaptionChange}
+                    maxLength={maxCaptionLength}
+                    multiline
+                    blurOnSubmit
+                    textAlign="center"
+                  />
+                </LinearGradient>
+              )
+            )}
+
+            {/* No camera device */}
+            {showCameraFeed && (!Camera || !device) && (
+              <View style={styles.noDevice}>
+                <ActivityIndicator color={colors.vibeCyan} size="large" />
+                <Text style={styles.noDeviceTxt}>Đang khởi động camera...</Text>
+              </View>
+            )}
+
+            {/* ── Filter colour overlay ── */}
+            {activeFilterId && (
+              <LinearGradient
+                colors={VIBE_FILTERS.find(f => f.id === activeFilterId)?.colors as any || []}
+                style={styles.filterOverlay}
+                pointerEvents="none"
+              />
+            )}
+
+            {/* ── UI Overlay ── */}
+            <View style={styles.overlay} pointerEvents="box-none">
+
+              {/* Right: filter buttons from data */}
+              <View style={styles.sideControls}>
+                {VIBE_FILTERS.map((f) => (
+                  <TouchableOpacity
+                    key={f.id}
+                    style={[styles.controlBtn, activeFilterId === f.id && styles.controlBtnActive]}
+                    onPress={() => applyFilter(f.id)}
+                  >
+                    <Icon name={f.icon} size={20} color={colors.white} />
+                    <Text style={styles.controlBtnLabel}>{f.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Left: intensity meter */}
+              <View style={styles.intensityWrap}>
+                <View style={styles.meterTrack}>
+                  <LinearGradient
+                    colors={[colors.vibeGradientEnd, colors.vibeGradientStart]}
+                    style={[styles.meterFill, { height: `${intensity * 100}%` as any }]}
+                  />
+                </View>
+                <Text style={styles.intensityLabel}>INTENSITY</Text>
+              </View>
+
+              {/* Brackets */}
+              <View style={[styles.bracket, styles.bTL]} />
+              <View style={[styles.bracket, styles.bTR]} />
+              <View style={[styles.bracket, styles.bBL]} />
+              <View style={[styles.bracket, styles.bBR]} />
+
+                <View style={[styles.vfBottom, { bottom: displayUri ? 10 : 80 }]} pointerEvents="box-none">
+                  {location && location.area && (
+                    <View style={styles.locationPill}>
+                      <Icon name="map-marker-outline" size={12} color={colors.vibeCyan} />
+                      <Text style={styles.locationTxt}>{location.area}</Text>
+                    </View>
+                  )}
+
+                  {vibeMode === 'photo' && (
+                    <>
+                      <TextInput
+                        style={styles.captionInput}
+                        placeholder="Thêm caption..."
+                        placeholderTextColor={colors.textOpacity60}
+                        value={caption}
+                        onChangeText={handleCaptionChange}
+                        maxLength={maxCaptionLength}
+                        multiline
+                        blurOnSubmit
+                      />
+                      <View style={styles.captionRow}>
+                        {displayUri && (
+                          <TouchableOpacity style={styles.retakeBtn} onPress={handleRetake}>
+                            <Icon name="camera-retake-outline" size={14} color={colors.white} />
+                            <Text style={styles.retakeTxt}>Chụp lại</Text>
+                          </TouchableOpacity>
+                        )}
+                        <View style={{ flex: 1 }} />
+                        <Text style={styles.charCounter}>{captionLength}/{maxCaptionLength}</Text>
+                      </View>
+                    </>
+                  )}
+
+                  {vibeMode === 'text' && (
+                    <View style={styles.captionRow}>
+                      <View style={{ flex: 1 }} />
+                      <Text style={styles.charCounter}>{captionLength}/{maxCaptionLength}</Text>
+                    </View>
+                  )}
+                </View>
+            </View>
+          </View>
+
+          {/* Track chip */}
+          {selectedTrack && (
+            <TouchableOpacity style={styles.trackChip} onPress={openMusicModal}>
+              <Icon name="music-note" size={14} color={colors.vibeCyan} />
+              <Text style={styles.trackChipTxt} numberOfLines={1}>
+                {selectedTrack.title} · {selectedTrack.artist} ({musicDuration}s)
+              </Text>
+              <Icon name="chevron-right" size={14} color={colors.textOpacity60} />
             </TouchableOpacity>
-          ) : (
-            <VibeCaptureButton onPress={handlePickImage} />
+          )}
+        </View>
+
+        {/* ══ Bottom Action Bar ══ */}
+        <View style={styles.footerContainer}>
+          {/* Mode Switcher */}
+          {!displayUri && (
+            <VibeModeSwitcher mode={vibeMode} onModeChange={handleModeSwitch} />
           )}
 
-          {/* Music */}
-          <TouchableOpacity
-            style={[styles.footerIconButton, selectedTrack && styles.footerIconButtonActive]}
-            onPress={() => setShowMusicModal(true)}
-          >
-            <Icon name="music-note" size={24} color={selectedTrack ? colors.vibeCyan : colors.whiteOpacity80} />
-          </TouchableOpacity>
+          <View style={styles.footer}>
+            <TouchableOpacity style={styles.footerIconBtn} onPress={handlePickImage}>
+              <Icon name="image-multiple-outline" size={24} color={colors.whiteOpacity80} />
+            </TouchableOpacity>
+
+            {canSubmit || capturedPhoto || vibeMode === 'text' ? (
+              <TouchableOpacity
+                style={[styles.postButton, !canSubmit && { opacity: 0.5 }]}
+                onPress={vibeMode === 'text' ? handleSubmit : handleCapturePress}
+                disabled={isSubmitting || !canSubmit}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator size="small" color={colors.bgDark} />
+                ) : (
+                  <>
+                    <Icon name="send" size={20} color={colors.bgDark} />
+                    <Text style={styles.postBtnTxt}>Đăng Vibe</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            ) : (
+              <VibeCaptureButton onPress={handleCapturePress} />
+            )}
+
+            <TouchableOpacity
+              style={[styles.footerIconBtn, !!selectedTrack && styles.footerIconBtnActive]}
+              onPress={openMusicModal}
+            >
+              <Icon
+                name="music-note"
+                size={24}
+                color={selectedTrack ? colors.vibeCyan : colors.whiteOpacity80}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
 
-      {/* ── Music Picker Modal ── */}
-      <Modal
+      {/* ══ Music Modal ══ */}
+      <MusicSelectorModal
         visible={showMusicModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowMusicModal(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <SafeAreaView style={styles.musicSheet} edges={['bottom']}>
-            {/* Handle */}
-            <View style={styles.sheetHandle} />
-
-            {/* Header */}
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Thêm nhạc</Text>
-              <TouchableOpacity onPress={handleMusicConfirm}>
-                <Icon name="check" size={24} color={colors.vibeCyan} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Search */}
-            <View style={styles.searchWrap}>
-              <Icon name="magnify" size={20} color={colors.textMuted} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Tìm bài hát, nghệ sĩ..."
-                placeholderTextColor={colors.textMuted}
-                value={searchKeyword}
-                onChangeText={setSearchKeyword}
-              />
-            </View>
-
-            {/* Track List */}
-            <FlatList
-              data={tracks}
-              keyExtractor={(item) => item.id}
-              horizontal={false}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.trackList}
-              renderItem={({ item }) => (
-                <MusicOptionCard
-                  track={item}
-                  isSelected={item.id === selectedTrackId}
-                  onPress={handleTrackSelect}
-                  variant="row"
-                />
-              )}
-              ListEmptyComponent={
-                isSearchingMusic ? (
-                  <ActivityIndicator size="small" color={colors.vibeCyan} style={{ marginTop: spacing.lg }} />
-                ) : (
-                  <Text style={styles.emptyText}>
-                    {searchKeyword.length > 0 ? 'Không tìm thấy bài hát.' : 'Tìm kiếm để thêm nhạc vào Vibe của bạn.'}
-                  </Text>
-                )
-              }
-            />
-          </SafeAreaView>
-        </View>
-      </Modal>
+        onClose={handleMusicClose}
+        searchKeyword={searchKeyword}
+        onSearchChange={setSearchKeyword}
+        tracks={tracks}
+        isSearching={isSearchingMusic}
+        selectedTrackId={selectedTrackId}
+        playingTrackId={playingTrackId}
+        selectedTrack={selectedTrack}
+        onTrackSelect={handleTrackSelect}
+        startTime={startTime}
+        musicDuration={musicDuration}
+        currentPlayTime={currentPlayTime}
+        onStartTimeChange={setStartTime}
+        bottomInset={insets.bottom}
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1, backgroundColor: colors.surfaceLow },
+  safeArea: { flex: 1 },
+  hiddenVideo: { width: 0, height: 0, position: 'absolute' },
+
+  // Permission
+  permScreen: {
     flex: 1,
     backgroundColor: colors.surfaceLow,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+    gap: spacing.md,
   },
-  safeArea: {
-    flex: 1,
+  permTitle: {
+    color: colors.textPrimary,
+    fontSize: typography.sizes.xxl,
+    fontWeight: typography.weights.bold,
+    textAlign: 'center',
   },
-  ambientGlow: {
-    position: 'absolute',
-    width: width * 0.8,
-    height: width * 0.8,
-    borderRadius: (width * 0.8) / 2,
-    opacity: 0.08,
+  permSub: {
+    color: colors.textSecondary,
+    fontSize: typography.sizes.lg,
+    textAlign: 'center',
   },
-  ambientTopLeft: {
-    top: -width * 0.2,
-    left: -width * 0.2,
+  permBtn: {
     backgroundColor: colors.vibeCyan,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.xxl,
+    paddingVertical: spacing.sm_md,
+    marginTop: spacing.md,
   },
-  ambientBottomRight: {
-    bottom: -width * 0.2,
-    right: -width * 0.2,
-    backgroundColor: colors.vibePurple,
+  permBtnTxt: {
+    color: colors.bgDark,
+    fontWeight: typography.weights.bold,
+    fontSize: typography.sizes.lg,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+  permCancel: { marginTop: spacing.sm },
+  permCancelTxt: { color: colors.textMuted, fontSize: typography.sizes.lg },
+
+  // Ambient
+  glow: {
+    position: 'absolute',
+    width: SCREEN_WIDTH * 0.75,
+    height: SCREEN_WIDTH * 0.75,
+    borderRadius: (SCREEN_WIDTH * 0.75) / 2,
+    opacity: 0.07,
   },
-  iconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.overlayLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.overlayBorder,
-  },
-  logoText: {
-    fontSize: 20,
-    fontWeight: typography.weights.heavy,
-    color: colors.vibeCyan,
-    letterSpacing: -0.5,
-  },
-  viewfinderContainer: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-    justifyContent: 'center',
-  },
-  viewfinderWrapper: {
+  glowTL: { top: -SCREEN_WIDTH * 0.2, left: -SCREEN_WIDTH * 0.2, backgroundColor: colors.vibeCyan },
+  glowBR: { bottom: -SCREEN_WIDTH * 0.2, right: -SCREEN_WIDTH * 0.2, backgroundColor: colors.vibePurple },
+
+  // Viewfinder
+  vfContainer: { flex: 1, paddingHorizontal: spacing.md, justifyContent: 'center' },
+  vfWrapper: {
     aspectRatio: 3 / 4,
     width: '100%',
-    borderRadius: 40,
+    borderRadius: 36,
     borderWidth: 2,
     borderColor: colors.vibePurpleOpacity30,
     overflow: 'hidden',
+    backgroundColor: colors.bgBlack,
   },
-  viewfinder: {
-    flex: 1,
-  },
-  viewfinderImage: {
-    opacity: 0.85,
-  },
-  viewfinderImageBlur: {
-    opacity: 0.45,
-  },
-  viewfinderOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(18, 18, 29, 0.25)',
-    padding: spacing.lg,
-  },
-  tapHint: {
+  camera: { ...StyleSheet.absoluteFillObject },
+  capturedImg: { ...StyleSheet.absoluteFillObject },
+  noDevice: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
   },
-  tapHintText: {
-    color: colors.whiteOpacity80,
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.semiBold,
-  },
+  noDeviceTxt: { color: colors.textSecondary, fontSize: typography.sizes.lg },
+
+  // Filter overlay
+  filterOverlay: { ...StyleSheet.absoluteFillObject },
+
+  // UI overlay
+  overlay: { ...StyleSheet.absoluteFillObject, padding: spacing.md },
+
+  // Filter side controls
   sideControls: {
     position: 'absolute',
     top: spacing.md,
     right: spacing.md,
-    gap: spacing.md,
+    gap: spacing.sm,
   },
-  controlButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.whiteOpacity10,
+  controlBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.vibeOverlay,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.overlayBorder,
+    gap: spacing.xs,
   },
-  controlButtonActive: {
+  controlBtnActive: {
     backgroundColor: colors.vibePurpleOpacity40,
     borderColor: colors.vibePurple,
+    borderWidth: 2,
   },
-  intensityContainer: {
+  controlBtnLabel: {
+    fontSize: 8,
+    color: colors.white,
+    fontWeight: typography.weights.bold,
+    letterSpacing: 0.5,
+  },
+
+  // Intensity meter
+  intensityWrap: {
     position: 'absolute',
     left: spacing.md,
-    top: '30%',
+    top: '25%',
     alignItems: 'center',
-    gap: spacing.sm,
   },
   meterTrack: {
     width: 2,
-    height: 120,
+    height: 110,
     backgroundColor: colors.overlayBorder,
     borderRadius: 1,
     overflow: 'hidden',
     justifyContent: 'flex-end',
   },
-  meterFill: {
-    width: '100%',
-    borderRadius: 1,
-  },
-  intensityText: {
-    fontSize: typography.sizes.xs,
+  meterFill: { width: '100%', borderRadius: 1 },
+  intensityLabel: {
+    fontSize: 9,
     color: colors.textOpacity60,
     fontWeight: typography.weights.bold,
     letterSpacing: 2,
     transform: [{ rotate: '90deg' }],
-    marginTop: 30,
-    width: 80,
+    marginTop: 34,
+    width: 75,
     textAlign: 'center',
   },
-  bracket: {
+
+  // Brackets
+  bracket: { position: 'absolute', width: spacing.lg, height: spacing.lg, borderColor: colors.whiteOpacity20 },
+  bTL: { top: spacing.sm, left: spacing.sm, borderTopWidth: 2, borderLeftWidth: 2, borderTopLeftRadius: spacing.sm_md },
+  bTR: { top: spacing.sm, right: spacing.sm, borderTopWidth: 2, borderRightWidth: 2, borderTopRightRadius: spacing.sm_md },
+  bBL: { bottom: spacing.sm, left: spacing.sm, borderBottomWidth: 2, borderLeftWidth: 2, borderBottomLeftRadius: spacing.sm_md },
+  bBR: { bottom: spacing.sm, right: spacing.sm, borderBottomWidth: 2, borderRightWidth: 2, borderBottomRightRadius: spacing.sm_md },
+
+  // Bottom overlay
+  vfBottom: {
     position: 'absolute',
-    width: 30,
-    height: 30,
-    borderColor: colors.whiteOpacity20,
-  },
-  bracketTopLeft: {
-    top: spacing.md,
-    left: spacing.md,
-    borderTopWidth: 2,
-    borderLeftWidth: 2,
-    borderTopLeftRadius: 12,
-  },
-  bracketTopRight: {
-    top: spacing.md,
-    right: spacing.md,
-    borderTopWidth: 2,
-    borderRightWidth: 2,
-    borderTopRightRadius: 12,
-  },
-  bracketBottomLeft: {
     bottom: spacing.md,
     left: spacing.md,
-    borderBottomWidth: 2,
-    borderLeftWidth: 2,
-    borderBottomLeftRadius: 12,
-  },
-  bracketBottomRight: {
-    bottom: spacing.md,
     right: spacing.md,
-    borderBottomWidth: 2,
-    borderRightWidth: 2,
-    borderBottomRightRadius: 12,
+    gap: spacing.xs,
   },
-  selectedTrackChip: {
+  locationPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.xs,
+    backgroundColor: colors.cyanBg,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.cyanBorder,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  locationTxt: {
+    color: colors.vibeCyan,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semiBold,
+  },
+  captionInput: {
+    color: colors.textPrimary,
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.semiBold,
+    textShadowColor: colors.vibeOverlayDark,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
+    maxHeight: 80,
+    paddingVertical: 0,
+  },
+  captionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  retakeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.whiteOpacity10,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.overlayBorder,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  retakeTxt: { color: colors.white, fontSize: typography.sizes.xs, fontWeight: typography.weights.semiBold },
+  charCounter: { color: colors.textOpacity60, fontSize: typography.sizes.xs },
+
+  // Text Mode specific
+  textModeContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  textModeInput: {
+    color: colors.white,
+    fontSize: typography.sizes.xxxl,
+    lineHeight: 40,
+    fontWeight: typography.weights.bold,
+    width: '100%',
+    padding: spacing.md,
+  },
+
+  // Track chip
+  trackChip: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'center',
     marginTop: spacing.sm,
-    gap: spacing.xs,
+    gap: spacing.xs + 2,
     backgroundColor: colors.overlayLight,
     borderRadius: borderRadius.full,
     borderWidth: 1,
-    borderColor: colors.vibeCyan + '40',
+    borderColor: colors.whiteOpacity20,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.xs + 2,
     maxWidth: '80%',
   },
-  selectedTrackText: {
+  trackChipTxt: {
     flex: 1,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
     color: colors.textPrimary,
   },
-  modeSelector: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.xl,
-    paddingVertical: spacing.md,
-  },
-  modeItem: {
-    alignItems: 'center',
-    paddingHorizontal: spacing.sm,
-  },
-  modeText: {
-    fontSize: 11,
-    fontWeight: typography.weights.bold,
-    color: colors.textOpacity60,
-    letterSpacing: 1.5,
-  },
-  modeTextActive: {
-    color: colors.vibeCyan,
-  },
-  modeActiveLine: {
-    width: '80%',
-    height: 2,
-    backgroundColor: colors.vibeCyan,
-    marginTop: 4,
-    borderRadius: 1,
+
+  // Footer
+  footerContainer: {
+    paddingBottom: spacing.lg,
+    backgroundColor: 'transparent',
+    gap: spacing.sm,
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.md,
+    paddingTop: spacing.xs,
   },
-  footerIconButton: {
+  footerIconBtn: {
     width: 52,
     height: 52,
     borderRadius: 26,
@@ -511,7 +703,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  footerIconButtonActive: {
+  footerIconBtnActive: {
     borderWidth: 1.5,
     borderColor: colors.vibeCyan,
     backgroundColor: colors.cyanBg,
@@ -526,73 +718,45 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm_md,
     shadowColor: colors.vibeCyan,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.55,
+    shadowRadius: spacing.md,
+    elevation: spacing.sm_md,
   },
-  postButtonText: {
+  postBtnTxt: {
     color: colors.bgDark,
     fontWeight: typography.weights.bold,
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.md,
   },
-  // ──── Music Modal ────
-  modalBackdrop: {
+
+  // ── Loading overlay ──
+  loadingOverlay: {
     flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
-  musicSheet: {
-    backgroundColor: colors.cardDark,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    maxHeight: '65%',
-    paddingHorizontal: spacing.md,
-  },
-  sheetHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.overlayBorder,
-    alignSelf: 'center',
-    marginTop: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  sheetHeader: {
-    flexDirection: 'row',
+    backgroundColor: colors.vibeOverlayDark,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
+    justifyContent: 'center',
   },
-  sheetTitle: {
+  loadingCard: {
+    backgroundColor: colors.cardDark,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.whiteOpacity20,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.xxl,
+    alignItems: 'center',
+    gap: spacing.md,
+    shadowColor: colors.vibeCyan,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: spacing.lg,
+    elevation: spacing.md_sm,
+  },
+  loadingTitle: {
     color: colors.textPrimary,
-    fontSize: typography.sizes.xxl,
+    fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
   },
-  searchWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.bgDark,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.overlayBorder,
-    minHeight: 48,
-  },
-  searchInput: {
-    flex: 1,
-    color: colors.textPrimary,
-    fontSize: typography.sizes.lg,
-    marginLeft: spacing.sm,
-  },
-  trackList: {
-    gap: spacing.sm,
-    paddingBottom: spacing.lg,
-  },
-  emptyText: {
+  loadingSubtitle: {
     color: colors.textSecondary,
     fontSize: typography.sizes.md,
-    textAlign: 'center',
-    marginTop: spacing.lg,
   },
 });

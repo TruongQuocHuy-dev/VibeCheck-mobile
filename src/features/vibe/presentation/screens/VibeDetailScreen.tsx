@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 import Video from 'react-native-video';
 import LinearGradient from 'react-native-linear-gradient';
@@ -21,6 +22,7 @@ import { useVibeDetail } from '../../application/hooks/useVibeDetail';
 
 export const VibeDetailScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
+  const videoRef = React.useRef<any>(null);
   const {
     detail,
     storySegments,
@@ -44,11 +46,30 @@ export const VibeDetailScreen: React.FC = () => {
     handlePressOut,
   } = useVibeDetail();
 
-  return (
-    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
-      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+  // Helper to calculate time remaining from expiresAt
+  const getTimeRemaining = (expiresAt: string | Date | null) => {
+    if (!expiresAt) return '24h';
+    const total = Date.parse(expiresAt.toString()) - Date.now();
+    if (total <= 0) return 'Đã hết hạn';
+    const hours = Math.floor(total / (1000 * 60 * 60));
+    if (hours > 0) return `${hours}h còn lại`;
+    const minutes = Math.floor(total / (1000 * 60));
+    return `${minutes}m còn lại`;
+  };
 
-      <ImageBackground source={{ uri: detail.backgroundImage }} style={styles.storyBackground} blurRadius={0}>
+  if (!detail) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.vibeCyan} />
+      </View>
+    );
+  }
+
+  const renderStoryContent = () => {
+    if (!detail) return null;
+
+    return (
+      <>
         <LinearGradient
           colors={['rgba(0,0,0,0.65)', 'rgba(0,0,0,0.15)']}
           style={[styles.topOverlay, { paddingTop: insets.top + spacing.xs }]}
@@ -79,13 +100,21 @@ export const VibeDetailScreen: React.FC = () => {
                 <View style={styles.ownerNameRow}>
                   <Text style={styles.ownerName} numberOfLines={1}>{detail.ownerName}</Text>
                   <Text style={styles.ownerTimeDot}>•</Text>
-                  <Text style={styles.ownerTimeText}>{detail.expiresIn}</Text>
+                  <Text style={styles.ownerTimeText}>{getTimeRemaining(detail.expiresAt)}</Text>
                 </View>
                 {detail.track && (
                   <View style={styles.headerMusicWrap}>
                     <Icon name="musical-note" size={spacing.sm} color={colors.neonCyan} />
                     <Text style={styles.headerMusicText} numberOfLines={1}>
                       {detail.track.title} • {detail.track.artist}
+                    </Text>
+                  </View>
+                )}
+                {detail.location && (
+                  <View style={styles.headerMusicWrap}>
+                    <Icon name="location-sharp" size={spacing.sm} color={colors.vibeCyan} />
+                    <Text style={styles.headerMusicText} numberOfLines={1}>
+                      {typeof detail.location === 'object' ? detail.location.area : detail.location}
                     </Text>
                   </View>
                 )}
@@ -109,10 +138,28 @@ export const VibeDetailScreen: React.FC = () => {
         {/* Music Video Playback */}
         {detail.track?.previewUrl && (
           <Video
+            ref={videoRef}
             source={{ uri: detail.track.previewUrl }}
             repeat={true}
             muted={isMuted}
             style={{ width: 0, height: 0 }}
+            onLoad={() => {
+              if (detail.track?.startTime) {
+                videoRef.current?.seek(detail.track.startTime);
+              }
+            }}
+            progressUpdateInterval={100}
+            onProgress={({ currentTime }) => {
+              const start = detail.track?.startTime || 0;
+              const duration = detail.track?.musicDuration || 20;
+              if (currentTime >= start + duration) {
+                videoRef.current?.seek(start);
+              }
+            }}
+            onEnd={() => {
+              const start = detail.track?.startTime || 0;
+              videoRef.current?.seek(start);
+            }}
           />
         )}
 
@@ -184,7 +231,26 @@ export const VibeDetailScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         </LinearGradient>
-      </ImageBackground>
+      </>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+
+      {detail.backgroundImage ? (
+        <ImageBackground source={{ uri: detail.backgroundImage }} style={styles.storyBackground} blurRadius={0}>
+          {renderStoryContent()}
+        </ImageBackground>
+      ) : (
+        <LinearGradient
+          colors={[colors.vibeGradientStart, colors.vibeGradientEnd]}
+          style={styles.storyBackground}
+        >
+          {renderStoryContent()}
+        </LinearGradient>
+      )}
     </SafeAreaView>
   );
 };
