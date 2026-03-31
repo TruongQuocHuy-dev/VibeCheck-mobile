@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Alert } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import apiClient from '../../../../infrastructure/api/axios';
 import { ENDPOINTS } from '../../../../infrastructure/api/endpoints';
+import { useToast } from '../../../../shared/hooks/useToast';
+import { useLoading } from '../../../../shared/hooks/useLoading';
 
 export interface VibeTag {
   _id: string;
@@ -15,11 +16,16 @@ interface VibeCardFormData {
   fullName: string;
   displayName: string;
   birthYear: number | null;
+  gender: 'male' | 'female' | null;
   bio: string;
   /** Array of VibeTag _id strings selected by user */
   vibes: string[];
   avatar: string | null;
   photos: string[];
+}
+
+interface UseVibeCardEditorProps {
+  onSuccess?: () => void;
 }
 
 interface UseVibeCardEditor {
@@ -39,13 +45,15 @@ interface UseVibeCardEditor {
   handleSave: () => Promise<void>;
 }
 
-// VIBE_TAGS are now fetched from the backend (/api/vibes).
+export const useVibeCardEditor = (props?: UseVibeCardEditorProps): UseVibeCardEditor => {
+  const { showToast } = useToast();
+  const { showLoading, hideLoading } = useLoading();
 
-export const useVibeCardEditor = (): UseVibeCardEditor => {
   const [form, setForm] = useState<VibeCardFormData>({
     fullName: '',
     displayName: '',
     birthYear: null,
+    gender: null,
     bio: '',
     vibes: [],
     avatar: null,
@@ -69,12 +77,12 @@ export const useVibeCardEditor = (): UseVibeCardEditor => {
           fullName: user.fullName ?? '',
           displayName: user.displayName ?? '',
           birthYear: user.birthYear ?? null,
+          gender: user.gender ?? null,
           bio: user.bio ?? '',
-          vibes: user.vibes ?? [],
+          vibes: (user.vibes as any[] ?? []).map(v => typeof v === 'object' ? v._id : v),
           avatar: user.avatar ?? null,
           photos: user.photos ?? [],
         });
-        // vibesRes is { vibes: [...] } after axios unwrap
         const tags: VibeTag[] = vibesRes?.vibes ?? vibesRes ?? [];
         setAvailableVibes(tags);
       } catch (err: any) {
@@ -111,6 +119,7 @@ export const useVibeCardEditor = (): UseVibeCardEditor => {
     if (!asset?.uri) return;
 
     setSaving(true);
+    showLoading('Đang tải ảnh đại diện...');
     try {
       const formData = new FormData();
       formData.append('avatar', {
@@ -122,12 +131,14 @@ export const useVibeCardEditor = (): UseVibeCardEditor => {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setForm((prev) => ({ ...prev, avatar: res?.avatarUrl ?? prev.avatar }));
+      showToast('Cập nhật ảnh đại diện thành công', 'success');
     } catch (err: any) {
-      Alert.alert('Lỗi', 'Không tải ảnh được: ' + (err?.message ?? 'Unknown'));
+      showToast('Không tải ảnh được: ' + (err?.message ?? 'Unknown'), 'error');
     } finally {
       setSaving(false);
+      hideLoading();
     }
-  }, []);
+  }, [showLoading, hideLoading, showToast]);
 
   const addPhoto = useCallback(async () => {
     const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.7 });
@@ -135,6 +146,7 @@ export const useVibeCardEditor = (): UseVibeCardEditor => {
     if (!asset?.uri) return;
 
     setSaving(true);
+    showLoading('Đang thêm ảnh...');
     try {
       const formData = new FormData();
       formData.append('photo', {
@@ -146,50 +158,60 @@ export const useVibeCardEditor = (): UseVibeCardEditor => {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setForm((prev) => ({ ...prev, photos: res?.photos ?? prev.photos }));
+      showToast('Thêm ảnh thành công', 'success');
     } catch (err: any) {
-      Alert.alert('Lỗi', 'Không tải ảnh được: ' + (err?.message ?? 'Unknown'));
+      showToast('Không tải ảnh được: ' + (err?.message ?? 'Unknown'), 'error');
     } finally {
       setSaving(false);
+      hideLoading();
     }
-  }, []);
+  }, [showLoading, hideLoading, showToast]);
 
   const removePhoto = useCallback(async (url: string) => {
     setSaving(true);
+    showLoading('Đang xoá ảnh...');
     try {
       await apiClient.delete(ENDPOINTS.USER.DELETE_PHOTO, { data: { photoUrl: url } });
       setForm((prev) => ({ ...prev, photos: prev.photos.filter((p) => p !== url) }));
+      showToast('Đã xoá ảnh', 'success');
     } catch (err: any) {
-      Alert.alert('Lỗi', 'Không xoá ảnh được: ' + (err?.message ?? 'Unknown'));
+      showToast('Không xoá ảnh được: ' + (err?.message ?? 'Unknown'), 'error');
     } finally {
       setSaving(false);
+      hideLoading();
     }
-  }, []);
+  }, [showLoading, hideLoading, showToast]);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
     setError(null);
+    showLoading('Đang lưu hồ sơ...');
     try {
-      // Update bio
+      // 1. Update Bio
       await apiClient.patch(ENDPOINTS.USER.UPDATE_BIO, { bio: form.bio });
-      // Update vibes
+      
+      // 2. Update Vibes
       await apiClient.post(ENDPOINTS.USER.UPDATE_VIBES, { vibes: form.vibes });
       
-      // Update fullName and displayName (now that backend accepts fullName)
-      if (form.birthYear) {
-        await apiClient.patch(ENDPOINTS.USER.UPDATE_PROFILE, {
-          fullName: form.fullName,
-          displayName: form.displayName,
-          birthYear: form.birthYear,
-        });
-      }
+      // 3. Update Names
+      await apiClient.patch(ENDPOINTS.USER.UPDATE_PROFILE, {
+        fullName: form.fullName,
+        displayName: form.displayName,
+      });
 
-      Alert.alert('✅ Đã lưu', 'Thẻ Vibe của bạn đã được cập nhật!');
+      showToast('Hồ sơ của bạn đã được cập nhật thành công!', 'success');
+      if (props?.onSuccess) {
+        props.onSuccess();
+      }
     } catch (err: any) {
-      setError(err?.message ?? 'Lưu thất bại.');
+      const msg = err?.message ?? 'Lưu thất bại.';
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setSaving(false);
+      hideLoading();
     }
-  }, [form]);
+  }, [form, props, showLoading, hideLoading, showToast]);
 
   return {
     form,

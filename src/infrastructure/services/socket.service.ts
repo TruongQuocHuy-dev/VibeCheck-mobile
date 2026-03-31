@@ -12,28 +12,37 @@ export const connectSocket = async (userId: string): Promise<void> => {
   if (socket?.connected) return;
 
   const token = await getAccessToken();
+  const socketUrl = APP_CONFIG.apiBaseUrl.replace('/api', '');
 
-  socket = io(APP_CONFIG.apiBaseUrl.replace('/api', ''), {
+  socket = io(socketUrl, {
     query: { userId },
     extraHeaders: {
       Authorization: `Bearer ${token ?? ''}`,
     },
-    transports: ['websocket'],
+    // Removing explicit websocket transport to allow fallback to polling (more stable for emulators)
+    // transports: ['websocket'],
     reconnection: true,
-    reconnectionAttempts: 5,
-    reconnectionDelay: 1000,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 2000,
   });
 
   socket.on('connect', () => {
-    console.log('🔌 Socket connected:', socket?.id);
+    console.log('✅ Socket connected successfully. ID:', socket?.id);
+    const { DeviceEventEmitter } = require('react-native');
+    DeviceEventEmitter.emit('socket_connected');
   });
 
   socket.on('disconnect', (reason) => {
-    console.log('❌ Socket disconnected:', reason);
+    console.log('🛑 Socket disconnected. Reason:', reason);
+    if (reason === 'io server disconnect') {
+      // the disconnection was initiated by the server, you need to reconnect manually
+      socket?.connect();
+    }
   });
 
   socket.on('connect_error', (err) => {
-    console.error('Socket connection error:', err.message);
+    console.error('❌ Socket connection error:', err.message);
+    console.log('💡 TIP: If on a real device, ensure API_BASE_URL is your computer\'s LAN IP.');
   });
 };
 

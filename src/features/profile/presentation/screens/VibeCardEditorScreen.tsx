@@ -33,7 +33,9 @@ export const VibeCardEditorScreen: React.FC = () => {
     addPhoto,
     removePhoto,
     handleSave,
-  } = useVibeCardEditor();
+  } = useVibeCardEditor({
+    onSuccess: () => navigation.navigate('Main', { screen: 'Profile' }),
+  });
 
   if (loading) {
     return (
@@ -96,6 +98,23 @@ export const VibeCardEditorScreen: React.FC = () => {
           <Text style={styles.avatarHint}>Nhấn để đổi ảnh đại diện</Text>
         </View>
 
+        {/* ── Identity (Read-only) ── */}
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>Thông tin định danh (Không thể sửa)</Text>
+          <View style={styles.readOnlyRow}>
+            <View style={styles.readOnlyItem}>
+              <Text style={styles.readOnlyLabel}>Giới tính</Text>
+              <Text style={styles.readOnlyValue}>
+                {form.gender === 'male' ? 'Nam' : form.gender === 'female' ? 'Nữ' : 'Chưa thiết lập'}
+              </Text>
+            </View>
+            <View style={styles.readOnlyItem}>
+              <Text style={styles.readOnlyLabel}>Năm sinh</Text>
+              <Text style={styles.readOnlyValue}>{form.birthYear ?? 'N/A'}</Text>
+            </View>
+          </View>
+        </View>
+
         {/* ── Full Name ── */}
         <View style={styles.fieldGroup}>
           <Text style={styles.label}>Họ và tên thật</Text>
@@ -112,12 +131,12 @@ export const VibeCardEditorScreen: React.FC = () => {
 
         {/* ── Display Name ── */}
         <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Tên hiển thị</Text>
+          <Text style={styles.label}>Biệt danh (Tên hiển thị)</Text>
           <TextInput
             style={styles.input}
             value={form.displayName}
             onChangeText={(v) => updateField('displayName', v)}
-            placeholder="Nhập tên của bạn..."
+            placeholder="Nhập biệt danh của bạn..."
             placeholderTextColor={colors.textOpacity60}
             maxLength={30}
           />
@@ -302,6 +321,32 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.md,
     borderWidth: 1,
     borderColor: colors.overlayBorder,
+  },
+  readOnlyRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  readOnlyItem: {
+    flex: 1,
+    backgroundColor: colors.bgTooltip,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.overlayBorder,
+    opacity: 0.8,
+  },
+  readOnlyLabel: {
+    fontSize: 10,
+    color: colors.textOpacity60,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+    fontWeight: '600',
+  },
+  readOnlyValue: {
+    color: colors.textSecondary,
+    fontSize: typography.sizes.md,
+    fontWeight: '500',
   },
   bioInput: { minHeight: 100 },
   charCount: {

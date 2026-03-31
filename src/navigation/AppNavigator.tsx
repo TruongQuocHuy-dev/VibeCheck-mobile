@@ -1,5 +1,5 @@
 import React from 'react';
-import { DeviceEventEmitter } from 'react-native';
+import { DeviceEventEmitter, AppState, AppStateStatus } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { WelcomeScreen } from '../features/auth/presentation/screens/WelcomeScreen';
 import { OtpScreen } from '../features/auth/presentation/screens/OtpScreen';
@@ -25,8 +25,12 @@ import { connectSocket, disconnectSocket } from '../infrastructure/services/sock
 
 const Stack = createNativeStackNavigator<any>();
 
+import { useUnreadCount } from '../shared/providers/UnreadProvider';
+
 export const AppNavigator = () => {
+  const { refreshUnread } = useUnreadCount();
   const [appState, setAppState] = React.useState<'LOADING' | 'AUTH' | 'ONBOARDING_PASS' | 'ONBOARDING_PROFILE' | 'ONBOARDING_VIBES' | 'MAIN'>('LOADING');
+  const appStateRef = React.useRef(AppState.currentState);
 
   React.useEffect(() => {
     const hydrate = async () => {
@@ -41,14 +45,19 @@ export const AppNavigator = () => {
       try {
         // Verify token validity on startup
         const res: any = await apiClient.get(ENDPOINTS.USER.GET_PROFILE);
-        const apiUser = res?.user;
+        const apiUser = res?.user || res?.data;
+
+        if (apiUser) {
+          const { saveUser } = require('../infrastructure/storage/AsyncStorage');
+          await saveUser(apiUser); // Save full profile with ID
+        }
 
         if (user.hasPassword === false) {
           setAppState('ONBOARDING_PASS');
         } else if (user.isProfileComplete === false) {
           setAppState('ONBOARDING_PROFILE');
         } else if (!apiUser?.vibes || apiUser.vibes.length === 0) {
-          setAppState('ONBOARDING_VIBES'); // Force them to pick vibe on reboot!
+          setAppState('ONBOARDING_VIBES'); 
         } else {
           setAppState('MAIN');
         }
@@ -91,31 +100,83 @@ export const AppNavigator = () => {
     };
   }, []);
 
+  // Handle Socket Connection based on AppState (Background/Foreground)
   React.useEffect(() => {
     let mounted = true;
 
-    const setupSocket = async () => {
+    const setupSocket = async (forceConnect = false) => {
+      console.log(`[SocketSetup] appState: ${appState}`);
       if (appState !== 'MAIN') {
+        console.log('[SocketSetup] Not in MAIN state, disconnecting...');
         disconnectSocket();
         return;
       }
 
-      const user: any = await getUser();
+      let user: any = await getUser();
       if (!mounted) return;
 
-      const userId = user?.id || user?._id;
+      // Robust ID detection
+      let userId = user?._id || user?.id || user?.uid;
+      
+      // AUTO-REPAIR: If in MAIN but missing ID, fetch from API
+      if (!userId && appState === 'MAIN') {
+        console.log('[SocketSetup] ID missing in MAIN, attempting auto-repair via API...');
+        try {
+          const res: any = await apiClient.get(ENDPOINTS.USER.GET_PROFILE);
+          const apiUser = res?.user || res?.data;
+          if (apiUser) {
+            const { saveUser } = require('../infrastructure/storage/AsyncStorage');
+            await saveUser(apiUser);
+            user = apiUser;
+            userId = apiUser._id || apiUser.id;
+            console.log(`[SocketSetup] Auto-repair success! Found userId: ${userId}`);
+          }
+        } catch (err) {
+          console.error('[SocketSetup] Auto-repair failed:', err);
+        }
+      }
+
+      console.log(`[SocketSetup] Final userId: ${userId}`);
+      
       if (userId) {
         await connectSocket(userId);
+      } else {
+        console.warn('[SocketSetup] userId is missing, cannot connect socket.');
+        console.log('[SocketSetup] Full user object in storage:', JSON.stringify(user));
+        if (appState === 'MAIN') {
+          console.log('[SocketSetup] Triggering logout due to missing ID...');
+          DeviceEventEmitter.emit('logout');
+        }
       }
     };
 
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (
+        appStateRef.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        console.log('📱 App has come to the foreground, connecting socket...');
+        setupSocket(true);
+        if (appState === 'MAIN') {
+          refreshUnread();
+        }
+      } else if (nextAppState.match(/inactive|background/)) {
+        console.log('💤 App has gone to the background, disconnecting socket...');
+        disconnectSocket();
+      }
+      appStateRef.current = nextAppState;
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    // Initial setup
     setupSocket();
 
     return () => {
       mounted = false;
-      if (appState !== 'MAIN') {
-        disconnectSocket();
-      }
+      subscription.remove();
+      // Only disconnect if we are leaving the MAIN state globally
+      // (Actual backgrounding is handled by handleAppStateChange)
     };
   }, [appState]);
 

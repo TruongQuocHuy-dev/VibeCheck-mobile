@@ -12,6 +12,7 @@ import { ErrorBoundary } from './src/shared/components/feedback/Error/ErrorBound
 import { ToastProvider } from './src/shared/providers/ToastProvider';
 import { LoadingProvider } from './src/shared/providers/LoadingProvider';
 import { NetworkProvider } from './src/shared/providers/NetworkProvider';
+import { UnreadProvider } from './src/shared/providers/UnreadProvider';
 
 function App() {
   return (
@@ -19,9 +20,11 @@ function App() {
       <ToastProvider>
         <LoadingProvider>
           <NetworkProvider>
-            <NavigationContainer>
-              <AppNavigator />
-            </NavigationContainer>
+            <UnreadProvider>
+              <NavigationContainer>
+                <AppNavigator />
+              </NavigationContainer>
+            </UnreadProvider>
           </NetworkProvider>
         </LoadingProvider>
       </ToastProvider>

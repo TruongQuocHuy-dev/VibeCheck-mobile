@@ -73,7 +73,7 @@ export const ProfileScreen: React.FC = () => {
             )}
           </View>
 
-          <Text style={styles.headerTitle}>{isOwnProfile ? 'Profile' : 'Match Profile'}</Text>
+          <Text style={styles.headerTitle}>{isOwnProfile ? 'Trang cá nhân' : 'Match Profile'}</Text>
 
           <View style={[styles.headerSide, styles.headerSideRight]}>
             {isOwnProfile ? (
@@ -89,13 +89,13 @@ export const ProfileScreen: React.FC = () => {
         </View>
 
         <View style={styles.profileSection}>
-          <TouchableOpacity 
-            style={styles.avatarWrap} 
+          <TouchableOpacity
+            style={styles.avatarWrap}
             onPress={ownVibeStories && ownVibeStories.length > 0 ? handleOwnStoryPress : undefined}
             activeOpacity={0.85}
           >
             <Image source={{ uri: profile.avatar }} style={styles.avatar} />
-            
+
             {ownVibeStories && ownVibeStories.length > 0 && (
               <View style={styles.activeVibeRing} />
             )}

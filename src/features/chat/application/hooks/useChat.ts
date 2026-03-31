@@ -40,18 +40,22 @@ export const useChat = (): UseChat => {
 
     // Listen for new messages from socket to update the inbox preview
     const handleNewMessage = (payload: { conversationId: string; message: Message }) => {
-      setChatList((prev) =>
-        prev.map((conv) =>
-          conv.id === payload.conversationId
-            ? {
-                ...conv,
-                lastMessage: payload.message.content,
-                lastMessageAt: payload.message.createdAt,
-                unreadCount: conv.unreadCount + 1,
-              }
-            : conv
-        )
-      );
+      setChatList((prev) => {
+        // Find the conversation to update
+        const existingConv = prev.find((conv) => conv.id === payload.conversationId);
+        if (!existingConv) return prev;
+
+        const updatedConv: ConversationItem = {
+          ...existingConv,
+          lastMessage: payload.message.content,
+          lastMessageAt: payload.message.createdAt,
+          unreadCount: existingConv.unreadCount + 1,
+        };
+
+        // Move it to the top: Filter it out of its current position and prepend it
+        const otherConvs = prev.filter((conv) => conv.id !== payload.conversationId);
+        return [updatedConv, ...otherConvs];
+      });
     };
 
     const handleNewMatch = () => {
@@ -59,12 +63,19 @@ export const useChat = (): UseChat => {
       loadConversations();
     };
 
+    const handleStatusUpdate = () => {
+      // Refresh to get new online statuses
+      loadConversations();
+    };
+
     onSocketEvent<{ conversationId: string; message: Message }>('message_notification', handleNewMessage);
     onSocketEvent<unknown>('new_match', handleNewMatch);
+    onSocketEvent<unknown>('status_update', handleStatusUpdate);
 
     return () => {
       offSocketEvent<{ conversationId: string; message: Message }>('message_notification', handleNewMessage);
       offSocketEvent<unknown>('new_match', handleNewMatch);
+      offSocketEvent<unknown>('status_update', handleStatusUpdate);
     };
   }, [loadConversations]);
 

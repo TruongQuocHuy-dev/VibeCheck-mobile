@@ -45,9 +45,14 @@ export const ChatDetailScreen: React.FC = () => {
     return 'Ngoại tuyến';
   };
 
-  const { messages, loading, sendMessage, isTyping } = useChatDetail(conversationId);
+  const { messages, loading, sendMessage, isTyping, otherUserStatus, setOtherUserStatus } = useChatDetail(conversationId);
   const [inputText, setInputText] = useState('');
   const flatListRef = useRef<FlatList>(null);
+
+  useEffect(() => {
+    // Initialize hook state with params from navigation
+    setOtherUserStatus({ isOnline, lastActive });
+  }, [isOnline, lastActive, setOtherUserStatus]);
 
   const handleSend = () => {
     if (inputText.trim()) {
@@ -65,7 +70,7 @@ export const ChatDetailScreen: React.FC = () => {
         )}
 
         <View style={styles.bubbleContent}>
-          {!item.isMe && <Text style={styles.senderName}>{item.sender?.displayName}</Text>}
+          {!item.isMe && <Text style={styles.senderName}>{item.sender?.fullName || name}</Text>}
           
           <View style={[styles.bubble, item.isMe ? styles.bubbleUser : styles.bubblePartner]}>
             {item.type === 'image' ? (
@@ -95,7 +100,7 @@ export const ChatDetailScreen: React.FC = () => {
         </View>
 
         {item.isMe && (
-          <Image source={{ uri: item.sender?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb' }} style={styles.avatar} />
+          <Image source={{ uri: item.sender?.avatar || 'https://via.placeholder.com/150' }} style={styles.avatar} />
         )}
       </View>
     );
@@ -114,8 +119,8 @@ export const ChatDetailScreen: React.FC = () => {
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>{name}</Text>
           <View style={styles.statusContainer}>
-            <View style={[styles.statusDot, isOnline ? styles.statusOnline : styles.statusOffline]} />
-            <Text style={styles.statusTextHeader}>{isOnline ? 'Đang hoạt động' : formatLastActive(lastActive)}</Text>
+            <View style={[styles.statusDot, otherUserStatus.isOnline ? styles.statusOnline : styles.statusOffline]} />
+            <Text style={styles.statusTextHeader}>{otherUserStatus.isOnline ? 'Đang hoạt động' : formatLastActive(otherUserStatus.lastActive)}</Text>
           </View>
         </View>
 

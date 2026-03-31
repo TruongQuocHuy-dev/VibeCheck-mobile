@@ -4,9 +4,11 @@ import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { colors } from '../../core/theme/colors';
+import { useUnreadCount } from '../../shared/providers/UnreadProvider';
 
 export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
   const insets = useSafeAreaInsets();
+  const { totalUnread } = useUnreadCount();
 
   const handleCreateVibePress = () => {
     navigation.getParent()?.navigate('CreateVibe' as never);
@@ -37,6 +39,7 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
 
     let iconName = 'home-outline';
     let label = 'Tab';
+    let showBadge = false;
 
     if (route.name === 'Discovery') {
       iconName = isFocused ? 'sparkles' : 'sparkles-outline';
@@ -47,6 +50,7 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
     } else if (route.name === 'Chat') {
       iconName = isFocused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline';
       label = 'Chat';
+      showBadge = totalUnread > 0;
     } else if (route.name === 'Profile') {
       iconName = isFocused ? 'person' : 'person-outline';
       label = 'Profile';
@@ -62,12 +66,20 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
         onLongPress={onLongPress}
         style={styles.tabItem}
       >
-
-        <Icon 
-          name={iconName} 
-          size={24} 
-          color={isFocused ? colors.primary : colors.textSecondary} 
-        />
+        <View>
+          <Icon 
+            name={iconName} 
+            size={24} 
+            color={isFocused ? colors.primary : colors.textSecondary} 
+          />
+          {showBadge && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {totalUnread > 99 ? '99+' : totalUnread}
+              </Text>
+            </View>
+          )}
+        </View>
         <Text style={[styles.tabLabel, { color: isFocused ? colors.primary : colors.textSecondary }]}>
           {label}
         </Text>
@@ -126,6 +138,28 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 4,
     fontWeight: '500',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -10,
+    backgroundColor: colors.neonPink || '#FF0099',
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: colors.cardDark || '#1A1A2E',
+    zIndex: 10,
+    elevation: 4,
+  },
+  badgeText: {
+    color: '#000000',
+    fontSize: 8,
+    fontWeight: '900',
+    textAlign: 'center',
   },
   fabButton: {
     width: 56,

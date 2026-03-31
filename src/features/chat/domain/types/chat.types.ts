@@ -18,8 +18,11 @@ export interface ChatItem {
 export interface ChatUser {
   _id: string;
   displayName: string;
+  fullName: string;
   avatar: string | null;
   bio?: string | null;
+  isOnline?: boolean;
+  lastActive?: string | null;
 }
 
 /**
