@@ -31,6 +31,8 @@ export const ChatScreen: React.FC = () => {
     unpinConversation,
     markAsUnread,
     deleteConversation,
+    blockUser,
+    unblockUser,
   } = useChat();
 
   const [selectedChat, setSelectedChat] = React.useState<ConversationItem | null>(null);
@@ -65,9 +67,14 @@ export const ChatScreen: React.FC = () => {
         deleteConversation(selectedChat.id);
         break;
       case 'block':
-        // Block logic (can be added to useChat as well)
+        if (selectedChat.blockedByMe) {
+          unblockUser(selectedChat.user._id);
+        } else {
+          blockUser(selectedChat.user._id);
+        }
         break;
     }
+    setModalVisible(false);
   };
 
   const renderChatItem = ({ item }: { item: ConversationItem }) => {

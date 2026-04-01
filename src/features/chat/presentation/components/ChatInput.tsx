@@ -89,7 +89,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
       <View style={styles.inputRow}>
         <TouchableOpacity style={styles.iconButton}>
-          <Icon name="camera" size={24} color={colors.white} />
+          <Icon name="images-outline" size={24} color={colors.white} />
         </TouchableOpacity>
         
         <View style={styles.inputWrapper}>
@@ -102,21 +102,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             onChangeText={handleChangeText}
             multiline
           />
+          <TouchableOpacity style={styles.innerIconButton}>
+             <Icon name="happy-outline" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.rightActions}>
           {!text ? (
-             <View style={styles.rightIcons}>
-                <TouchableOpacity style={styles.innerIconButton}>
-                   <Icon name="mic-outline" size={22} color={colors.white} />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.innerIconButton}>
-                   <Icon name="image-outline" size={22} color={colors.white} />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.innerIconButton}>
-                   <Icon name="happy-outline" size={22} color={colors.white} />
-                </TouchableOpacity>
-             </View>
+            <TouchableOpacity style={styles.actionButton}>
+              <Icon name="mic" size={26} color={colors.messengerBlue} />
+            </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-               <Text style={styles.sendButtonText}>Gửi</Text>
+            <TouchableOpacity style={styles.actionButton} onPress={handleSend}>
+              <Icon name="send" size={24} color={colors.messengerBlue} />
             </TouchableOpacity>
           )}
         </View>
@@ -161,13 +159,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.messengerBlue,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   inputWrapper: {
     flex: 1,
@@ -176,7 +174,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMedium,
     borderRadius: 22,
     paddingHorizontal: spacing.md,
-    paddingVertical: 5,
+    paddingVertical: 4,
     minHeight: 44,
   },
   input: {
@@ -187,22 +185,19 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === 'ios' ? 10 : 8,
     maxHeight: 120,
   },
-  rightIcons: {
+  innerIconButton: {
+    paddingBottom: 8,
+    marginLeft: spacing.xs,
+  },
+  rightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    paddingBottom: 4,
   },
-  innerIconButton: {
-    padding: 5,
-  },
-  sendButton: {
-    paddingHorizontal: spacing.md_sm,
-    paddingVertical: spacing.sm,
-    marginBottom: 2,
-  },
-  sendButtonText: {
-    color: colors.messengerBlue,
-    fontWeight: 'bold',
-    fontSize: 15,
+  actionButton: {
+    width: 40,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

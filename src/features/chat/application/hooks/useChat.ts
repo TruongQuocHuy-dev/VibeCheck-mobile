@@ -25,6 +25,8 @@ interface UseChat {
   unpinConversation: (id: string) => Promise<void>;
   markAsUnread: (id: string) => Promise<void>;
   deleteConversation: (id: string) => Promise<void>;
+  blockUser: (userId: string) => Promise<void>;
+  unblockUser: (userId: string) => Promise<void>;
 }
 
 export const useChat = (): UseChat => {
@@ -173,6 +175,24 @@ export const useChat = (): UseChat => {
     }
   };
 
+  const blockUser = async (userId: string) => {
+    try {
+      await chatRepository.blockUser(userId);
+      // Socket will handle refresh via handleBlockEvent
+    } catch (err) {
+      console.error('Block error:', err);
+    }
+  };
+
+  const unblockUser = async (userId: string) => {
+    try {
+      await chatRepository.unblockUser(userId);
+      // Socket will handle refresh via handleBlockEvent
+    } catch (err) {
+      console.error('Unblock error:', err);
+    }
+  };
+
   const handleChatPress = useCallback(
     (
       conversationId: string, 
@@ -213,5 +233,7 @@ export const useChat = (): UseChat => {
     unpinConversation,
     markAsUnread,
     deleteConversation,
+    blockUser,
+    unblockUser,
   };
 };
