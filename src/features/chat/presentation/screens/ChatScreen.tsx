@@ -51,7 +51,7 @@ export const ChatScreen: React.FC = () => {
     return (
       <TouchableOpacity
         style={styles.chatItem}
-        onPress={() => handleChatPress(item.id, fullName, avatar, isOnline)}
+        onPress={() => handleChatPress(item.id, fullName, avatar, isOnline, item.user?._id, item.user?.lastActive)}
         activeOpacity={0.7}
       >
         <View style={styles.avatarContainer}>
@@ -71,7 +71,8 @@ export const ChatScreen: React.FC = () => {
             <Text 
               style={[
                 styles.lastMessage, 
-                item.unreadCount > 0 && styles.lastMessageUnread
+                item.unreadCount > 0 && styles.lastMessageUnread,
+                item.lastMessage === 'Tin nhắn đã được thu hồi' && styles.lastMessageRecalled
               ]} 
               numberOfLines={1}
             >
@@ -264,6 +265,10 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: '600',
     fontFamily: 'Outfit-Medium',
+  },
+  lastMessageRecalled: {
+    fontStyle: 'italic',
+    color: 'rgba(255, 255, 255, 0.3)',
   },
   unreadBadge: {
     backgroundColor: colors.neonPink,

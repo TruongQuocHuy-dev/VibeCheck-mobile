@@ -36,6 +36,12 @@ export interface ConversationItem {
   unreadCount: number;
 }
 
+export interface Reaction {
+  userId: string;
+  emoji: string;
+  createdAt: string;
+}
+
 /**
  * A single chat message from backend.
  */
@@ -44,13 +50,25 @@ export interface Message {
   conversationId: string;
   sender: ChatUser;
   content: string;
-  type: 'text' | 'image' | 'story_reply';
+  type: 'text' | 'image' | 'video' | 'story_reply';
   storyReference?: {
     storyId?: string;
     imageUrl?: string;
     caption?: string;
   };
+  replyTo?: Message;
+  reactions?: Reaction[];
+  mediaUrl?: string;
+  mediaType?: 'image' | 'video';
   readBy: string[];
+  deletedBy?: string[];
+  isRecalled?: {
+    status: boolean;
+    by: string;
+    at: string;
+  };
   createdAt: string;
+  isMe?: boolean; // UI flag
+  status?: 'sending' | 'sent' | 'error'; // UI flag
 }
 

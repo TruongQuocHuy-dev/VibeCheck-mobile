@@ -54,6 +54,14 @@ export const colors = Object.freeze({
   filterExposureEnd: 'rgba(255,255,255,0)',
   filterAutoStart: 'rgba(0,240,255,0.10)',
   filterAutoEnd: 'rgba(108,99,255,0.12)',
+  surfaceMedium: '#262626',
+  surfaceHigh: '#333333',
+  surfacePill: '#222222',
+  overlayStrong: 'rgba(0, 0, 0, 0.6)',
+  borderDark: '#121212',
+  messengerBlue: '#3797F0',
+  neonGreen: '#39FF14',
+  bgTyping: '#2A2A2A',
 } as const);
 
 export type ColorKey = keyof typeof colors;

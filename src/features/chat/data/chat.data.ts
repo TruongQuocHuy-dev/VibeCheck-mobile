@@ -1,4 +1,5 @@
-import { ChatItem } from '../domain/types/chat.types';
+import { Message, ChatUser, ChatItem } from '../domain/types/chat.types';
+export const REACTION_EMOJIS = ['❤️', '😆', '😮', '😢', '😡', '👍', '🔥', '👏'];
 
 export const mockChatList: ChatItem[] = [
   {
@@ -19,32 +20,45 @@ export const mockChatList: ChatItem[] = [
     unreadCount: 0,
     isOnline: true,
   },
-  {
-    id: '3',
-    name: 'Hà Anh',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80',
-    lastMessage: 'Let\'s grab some coffee later!',
-    time: '1h ago',
-    unreadCount: 0,
-    isOnline: false,
-  },
-  {
-    id: '4',
-    name: 'Linh2003',
-    avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80',
-    lastMessage: 'Check this out lol',
-    time: '3h ago',
-    unreadCount: 1,
+];
+
+export const mockUsers: Record<string, ChatUser> = {
+  vibe_user: {
+    _id: 'vibe_user_1',
+    displayName: 'Alex_Vibe',
+    fullName: 'Alex Vibe',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80',
     isOnline: true,
+    lastActive: new Date().toISOString(),
+  },
+  me: {
+    _id: 'me',
+    displayName: 'You',
+    fullName: 'You',
+    avatar: 'https://via.placeholder.com/150',
+  },
+};
+
+export const initialMockMessages: Message[] = [
+  {
+    _id: '1',
+    conversationId: '1',
+    sender: mockUsers.vibe_user,
+    content: 'Yo! That song you shared is fire 🔥',
+    type: 'text',
+    readBy: ['me'],
+    createdAt: new Date(Date.now() - 3600000).toISOString(),
+    reactions: [{ userId: 'me', emoji: '❤️', createdAt: new Date().toISOString() }],
   },
   {
-    id: '5',
-    name: 'KTX B Crew 🚀',
-    avatar: '', // Group chat might use icon or gradient
-    lastMessage: 'Minh: Who\'s down for dinner?',
-    time: '5h ago',
-    unreadCount: 0,
-    isOnline: false,
-    isGroup: true,
+    _id: '2',
+    conversationId: '1',
+    sender: mockUsers.me,
+    content: 'Glad you liked it! It\'s really catchy.',
+    type: 'text',
+    readBy: ['vibe_user_1'],
+    createdAt: new Date(Date.now() - 3500000).toISOString(),
+    isMe: true,
+    status: 'sent',
   },
 ];

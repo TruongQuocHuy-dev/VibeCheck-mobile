@@ -16,6 +16,8 @@ export const borderRadius = Object.freeze({
   md: 12,
   lg: 20,
   xl: 30,
+  radius_pill: 34,
+  radius_modal: 20,
   full: 9999,
 } as const);
 

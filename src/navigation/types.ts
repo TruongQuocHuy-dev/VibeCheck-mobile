@@ -24,7 +24,8 @@ export type RootStackParamList = {
     avatar: string;
     isOnline?: boolean;
   };
-  ChatDetail: { conversationId: string; name: string; avatar: string | null; isOnline: boolean };
+  ChatDetail: { conversationId: string; name: string; avatar: string | null; isOnline: boolean; otherUserId: string; lastActive?: string | null };
+  ChatInfo: { conversationId: string; userId: string; name: string; avatar: string | null; bio?: string | null };
   DiscoveryDetail: { candidates: Candidate[]; initialIndex: number; filters?: DiscoveryFilters };
   MatchReveal: {
     matchedUserName: string;

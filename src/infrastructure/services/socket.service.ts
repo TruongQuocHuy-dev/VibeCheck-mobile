@@ -90,6 +90,13 @@ export const offSocketEvent = <T>(event: string, callback?: (data: T) => void): 
 };
 
 /**
+ * Emit a specific socket event.
+ */
+export const emitSocketEvent = <T>(event: string, data: T): void => {
+  socket?.emit(event, data);
+};
+
+/**
  * Get the raw socket instance (use sparingly).
  */
 export const getSocket = (): Socket | null => socket;

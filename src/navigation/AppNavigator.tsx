@@ -8,6 +8,7 @@ import { ProfileSetupScreen } from '../features/auth/presentation/screens/Profil
 import { VibePickerScreen } from '../features/auth/presentation/screens/VibePickerScreen';
 import { TabNavigator } from './TabNavigator';
 import { ChatDetailScreen } from '../features/chat/presentation/screens/ChatDetailScreen';
+import { ChatInfoScreen } from '../features/chat/presentation/screens/ChatInfoScreen';
 import { DiscoveryDetailScreen } from '../features/discovery/presentation/screens/DiscoveryDetailScreen';
 import { MatchRevealScreen } from '../features/discovery/presentation/screens/MatchRevealScreen';
 import { NotificationsScreen } from '../features/notifications/presentation/screens/NotificationsScreen';
@@ -57,7 +58,7 @@ export const AppNavigator = () => {
         } else if (user.isProfileComplete === false) {
           setAppState('ONBOARDING_PROFILE');
         } else if (!apiUser?.vibes || apiUser.vibes.length === 0) {
-          setAppState('ONBOARDING_VIBES'); 
+          setAppState('ONBOARDING_VIBES');
         } else {
           setAppState('MAIN');
         }
@@ -117,7 +118,7 @@ export const AppNavigator = () => {
 
       // Robust ID detection
       let userId = user?._id || user?.id || user?.uid;
-      
+
       // AUTO-REPAIR: If in MAIN but missing ID, fetch from API
       if (!userId && appState === 'MAIN') {
         console.log('[SocketSetup] ID missing in MAIN, attempting auto-repair via API...');
@@ -137,7 +138,7 @@ export const AppNavigator = () => {
       }
 
       console.log(`[SocketSetup] Final userId: ${userId}`);
-      
+
       if (userId) {
         await connectSocket(userId);
       } else {
@@ -191,26 +192,26 @@ export const AppNavigator = () => {
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
           <Stack.Screen name="OtpScreen">
             {props => (
-              <OtpScreen 
-                {...props} 
-                onLoginSuccess={() => setAppState('MAIN')} 
+              <OtpScreen
+                {...props}
+                onLoginSuccess={() => setAppState('MAIN')}
               />
             )}
           </Stack.Screen>
           <Stack.Screen name="CreatePassword" component={CreatePasswordScreen} />
           <Stack.Screen name="ProfileSetup">
             {props => (
-              <ProfileSetupScreen 
-                {...props} 
-                onComplete={() => props.navigation.navigate('VibePicker')} 
+              <ProfileSetupScreen
+                {...props}
+                onComplete={() => props.navigation.navigate('VibePicker')}
               />
             )}
           </Stack.Screen>
           <Stack.Screen name="VibePicker">
             {props => (
-              <VibePickerScreen 
-                onComplete={() => setAppState('MAIN')} 
-                onBack={() => props.navigation.goBack()} 
+              <VibePickerScreen
+                onComplete={() => setAppState('MAIN')}
+                onBack={() => props.navigation.goBack()}
               />
             )}
           </Stack.Screen>
@@ -222,16 +223,16 @@ export const AppNavigator = () => {
           <Stack.Screen name="CreatePassword" component={CreatePasswordScreen} />
           <Stack.Screen name="ProfileSetup">
             {props => (
-              <ProfileSetupScreen 
-                {...props} 
-                onComplete={() => props.navigation.navigate('VibePicker')} 
+              <ProfileSetupScreen
+                {...props}
+                onComplete={() => props.navigation.navigate('VibePicker')}
               />
             )}
           </Stack.Screen>
           <Stack.Screen name="VibePicker">
             {props => (
-              <VibePickerScreen 
-                onComplete={() => setAppState('MAIN')} 
+              <VibePickerScreen
+                onComplete={() => setAppState('MAIN')}
                 onBack={() => props.navigation.goBack()}
               />
             )}
@@ -243,16 +244,16 @@ export const AppNavigator = () => {
         <>
           <Stack.Screen name="ProfileSetup">
             {props => (
-              <ProfileSetupScreen 
-                {...props} 
-                onComplete={() => props.navigation.navigate('VibePicker')} 
+              <ProfileSetupScreen
+                {...props}
+                onComplete={() => props.navigation.navigate('VibePicker')}
               />
             )}
           </Stack.Screen>
           <Stack.Screen name="VibePicker">
             {props => (
-              <VibePickerScreen 
-                onComplete={() => setAppState('MAIN')} 
+              <VibePickerScreen
+                onComplete={() => setAppState('MAIN')}
                 onBack={() => props.navigation.goBack()}
               />
             )}
@@ -262,8 +263,8 @@ export const AppNavigator = () => {
       {appState === 'ONBOARDING_VIBES' && (
         <Stack.Screen name="VibePicker">
           {props => (
-            <VibePickerScreen 
-              onComplete={() => setAppState('MAIN')} 
+            <VibePickerScreen
+              onComplete={() => setAppState('MAIN')}
               onBack={() => setAppState('ONBOARDING_PROFILE')}
             />
           )}
@@ -278,6 +279,7 @@ export const AppNavigator = () => {
           <Stack.Screen name="VibeDetail" component={VibeDetailScreen} />
           <Stack.Screen name="MatchProfile" component={ProfileScreen} />
           <Stack.Screen name="ChatDetail" component={ChatDetailScreen} />
+          <Stack.Screen name="ChatInfo" component={ChatInfoScreen} />
           <Stack.Screen name="DiscoveryDetail" component={DiscoveryDetailScreen} />
           <Stack.Screen
             name="MatchReveal"

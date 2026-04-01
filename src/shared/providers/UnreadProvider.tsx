@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { fetchConversations } from '../../features/chat/data/chat.service';
+import { DeviceEventEmitter } from 'react-native';
+import { fetchConversations } from '../../infrastructure/services/chat.service';
+import { ConversationItem } from '../../features/chat/domain/types/chat.types';
 import { onSocketEvent, offSocketEvent } from '../../infrastructure/services/socket.service';
 
 interface UnreadContextType {
@@ -10,8 +12,6 @@ interface UnreadContextType {
 
 const UnreadContext = createContext<UnreadContextType | undefined>(undefined);
 
-import { DeviceEventEmitter } from 'react-native';
-
 export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [totalUnread, setTotalUnread] = useState(0);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
@@ -19,7 +19,7 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const refreshUnread = useCallback(async () => {
     try {
       const conversations = await fetchConversations();
-      const total = conversations.reduce((acc, conv) => acc + (conv.unreadCount || 0), 0);
+      const total = conversations.reduce((acc: number, conv: ConversationItem) => acc + (conv.unreadCount || 0), 0);
       setTotalUnread(total);
     } catch (error) {
       console.error('[UnreadProvider] Error fetching unread count:', error);

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,426 +6,347 @@ import {
   FlatList,
   TouchableOpacity,
   Image,
-  TextInput,
   KeyboardAvoidingView,
   Platform,
   StatusBar,
+  ActivityIndicator,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Animated,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { colors } from '../../../../core/theme/colors';
+import { spacing, borderRadius as br } from '../../../../core/theme/spacing';
 import { useChatDetail } from '../../application/hooks/useChatDetail';
+import { MessageBubble } from '../components/MessageBubble';
+import { ChatInput } from '../components/ChatInput';
+import { MessageActionModal } from '../components/MessageActionModal';
+import { TypingIndicator } from '../components/TypingIndicator';
+import { Message } from '../../domain/types/chat.types';
 
 export const ChatDetailScreen: React.FC = () => {
   const route = useRoute<any>();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { conversationId, name, avatar, isOnline, lastActive } = route.params || {
-    conversationId: '1',
-    name: 'Vibe User',
-    avatar: 'https://via.placeholder.com/150',
-    isOnline: false,
-    lastActive: null,
-  };
+  const { conversationId, name, avatar, isOnline, otherUserId, lastActive } = route.params || {};
 
-  const formatLastActive = (dateString?: string | Date | null) => {
-    if (!dateString) return 'Ngoại tuyến';
-    const activeDate = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - activeDate.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
+  const {
+    messages,
+    loading,
+    loadingMore,
+    hasMore,
+    loadMore,
+    sendMessage,
+    toggleReaction,
+    deleteMessage,
+    clearHistory,
+    replyingTo,
+    setReplyingTo,
+    otherUserStatus,
+    formatLastActive,
+    isPeerTyping,
+    sendTypingStatus,
+    isBlocked,
+  } = useChatDetail(conversationId, { isOnline, otherUserId, lastActive });
 
-    if (diffMins < 1) return 'Vừa mới truy cập';
-    if (diffMins < 60) return `Hoạt động ${diffMins} phút trước`;
-    if (diffHours < 24) return `Hoạt động ${diffHours} giờ trước`;
-    if (diffDays < 7) return `Hoạt động ${diffDays} ngày trước`;
-    return 'Ngoại tuyến';
-  };
-
-  const { messages, loading, sendMessage, isTyping, otherUserStatus, setOtherUserStatus } = useChatDetail(conversationId);
-  const [inputText, setInputText] = useState('');
   const flatListRef = useRef<FlatList>(null);
+  const isAtBottomRef = useRef(true);
+  const scrollBtnAnim = useRef(new Animated.Value(0)).current;
 
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [reactionModalVisible, setReactionModalVisible] = useState(false);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+
+  // Force Scroll to Bottom on Initial Load
   useEffect(() => {
-    // Initialize hook state with params from navigation
-    setOtherUserStatus({ isOnline, lastActive });
-  }, [isOnline, lastActive, setOtherUserStatus]);
+    if (!loading && messages.length > 0) {
+      const timer = setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, messages.length > 0]); 
 
-  const handleSend = () => {
-    if (inputText.trim()) {
-      sendMessage(inputText.trim());
-      setInputText('');
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+  // Handle FAB animation
+  useEffect(() => {
+    Animated.spring(scrollBtnAnim, {
+      toValue: showScrollToBottom ? 1 : 0,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 40,
+    }).start();
+  }, [showScrollToBottom, scrollBtnAnim]);
+
+  const formatDividerDate = (dateString: string) => {
+    const d = new Date(dateString);
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    const yesterday = new Date();
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday = d.toDateString() === yesterday.toDateString();
+    const timeStr = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    if (isToday) return timeStr;
+    if (isYesterday) return `Hôm qua, ${timeStr}`;
+    return d.toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  };
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset } = event.nativeEvent;
+    const isAtBottom = contentOffset.y <= 100;
+    if (isAtBottom && showScrollToBottom) setShowScrollToBottom(false);
+    isAtBottomRef.current = isAtBottom;
+  };
+
+  const jumpToBottom = () => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+    setShowScrollToBottom(false);
+  };
+
+  const handleLongPress = (message: Message) => {
+    setSelectedMessage(message);
+    setReactionModalVisible(true);
+  };
+
+  const onSelectEmoji = (emoji: string) => {
+    if (selectedMessage) {
+      toggleReaction(selectedMessage._id, emoji);
+      setReactionModalVisible(false);
+      setSelectedMessage(null);
     }
   };
 
-  const renderMessageItem = ({ item }: { item: any }) => {
+  const handleActionPress = async (action: 'reply' | 'copy' | 'report' | 'delete' | 'recall') => {
+    if (!selectedMessage) return;
+    
+    try {
+      if (action === 'reply') setReplyingTo(selectedMessage);
+      if (action === 'delete') {
+        await deleteMessage(selectedMessage._id, 'me');
+      }
+      if (action === 'recall') {
+        await deleteMessage(selectedMessage._id, 'all');
+      }
+    } catch (err) {
+      // Error handled in hook (rollback + console)
+    } finally {
+      setReactionModalVisible(false);
+      setSelectedMessage(null);
+    }
+  };
+
+  const goToInfo = () => {
+    (navigation as any).navigate('ChatInfo', {
+      conversationId,
+      userId: otherUserId,
+      name,
+      avatar,
+    });
+  };
+
+  const renderMessageItem = ({ item, index }: { item: Message; index: number }) => {
+    const newerMsg = messages[index - 1];
+    const olderMsg = messages[index + 1];
+    const currentSenderId = typeof item.sender === 'string' ? item.sender : (item.sender as any)?._id || (item.sender as any)?.id;
+    const newerSenderId = newerMsg ? (typeof newerMsg.sender === 'string' ? newerMsg.sender : (newerMsg.sender as any)?._id || (newerMsg.sender as any)?.id) : null;
+    const olderSenderId = olderMsg ? (typeof olderMsg.sender === 'string' ? olderMsg.sender : (olderMsg.sender as any)?._id || (olderMsg.sender as any)?.id) : null;
+
+    const isPrevSameSender = newerSenderId === currentSenderId;
+    const isNextSameSender = olderSenderId === currentSenderId;
+
+    let showDivider = false;
+    if (!olderMsg) showDivider = true;
+    else {
+      const currentTime = new Date(item.createdAt).getTime();
+      const olderTime = new Date(olderMsg.createdAt).getTime();
+      if ((currentTime - olderTime) / 60000 > 60) showDivider = true;
+    }
+
     return (
-      <View style={[styles.messageContainer, item.isMe ? styles.messageRight : styles.messageLeft]}>
-        {!item.isMe && (
-          <Image source={{ uri: item.sender?.avatar || avatar }} style={styles.avatar} />
-        )}
-
-        <View style={styles.bubbleContent}>
-          {!item.isMe && <Text style={styles.senderName}>{item.sender?.fullName || name}</Text>}
-          
-          <View style={[styles.bubble, item.isMe ? styles.bubbleUser : styles.bubblePartner]}>
-            {item.type === 'image' ? (
-              <Image source={{ uri: item.content }} style={styles.messageImage} resizeMode="cover" />
-            ) : item.type === 'story_reply' ? (
-              <View style={styles.storyReplyWrapper}>
-                <View style={styles.storyReferenceCard}>
-                  {item.storyReference?.imageUrl && (
-                    <Image source={{ uri: item.storyReference.imageUrl }} style={styles.storyThumb} />
-                  )}
-                  <Text style={styles.storyReplyTitle} numberOfLines={1}>
-                    Đã trả lời Vibe
-                  </Text>
-                </View>
-                <Text style={styles.messageText}>{item.content}</Text>
-              </View>
-            ) : (
-              <Text style={styles.messageText}>{item.content}</Text>
-            )}
+      <View>
+        {showDivider && (
+          <View style={styles.dividerContainer}>
+            <Text style={styles.dividerText}>{formatDividerDate(item.createdAt)}</Text>
           </View>
-
-          {item.isMe && (
-            <View style={styles.statusRow}>
-              <Icon name="checkmark-done" size={12} color="#00F0FF" />
-            </View>
-          )}
-        </View>
-
-        {item.isMe && (
-          <Image source={{ uri: item.sender?.avatar || 'https://via.placeholder.com/150' }} style={styles.avatar} />
         )}
+        <MessageBubble
+          message={item}
+          isPrevSameSender={isPrevSameSender}
+          isNextSameSender={isNextSameSender}
+          onLongPress={handleLongPress}
+          onDoubleTap={(msg) => toggleReaction(msg._id, '❤️')}
+          onReplyPress={(msg) => setReplyingTo(msg)}
+        />
       </View>
     );
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor="#0B1919" />
-      
-      {/* Header */}
+      <StatusBar barStyle="light-content" backgroundColor={colors.borderDark} />
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Icon name="chevron-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>{name}</Text>
-          <View style={styles.statusContainer}>
-            <View style={[styles.statusDot, otherUserStatus.isOnline ? styles.statusOnline : styles.statusOffline]} />
-            <Text style={styles.statusTextHeader}>{otherUserStatus.isOnline ? 'Đang hoạt động' : formatLastActive(otherUserStatus.lastActive)}</Text>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Icon name="arrow-back" size={24} color={colors.white} />
+          </TouchableOpacity>
+          <View style={styles.avatarContainer}>
+            <Image source={{ uri: avatar }} style={styles.headerAvatar} />
+            {otherUserStatus.isOnline && <View style={styles.onlineBadge} />}
+          </View>
+          <View style={styles.headerInfo}>
+            <Text style={styles.headerName}>{name}</Text>
+            <Text style={[styles.headerStatus, otherUserStatus.isOnline && styles.headerStatusOnline]}>
+              {otherUserStatus.isOnline ? 'Đang hoạt động' : formatLastActive(otherUserStatus.lastActive)}
+            </Text>
           </View>
         </View>
-
-        <TouchableOpacity style={styles.moreButton}>
-          <Icon name="ellipsis-vertical" size={20} color="#FFFFFF" />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity style={styles.headerIcon} onPress={goToInfo}>
+            <Icon name="information-circle-outline" size={26} color={colors.white} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Message List */}
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}
       >
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          renderItem={renderMessageItem}
-          keyExtractor={(item: any) => item._id}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-          ListEmptyComponent={
-            !loading ? (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>Bắt đầu cuộc trò chuyện với {name}</Text>
-              </View>
-            ) : null
-          }
-        />
+        <View style={styles.listWrapper}>
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            renderItem={renderMessageItem}
+            keyExtractor={(item) => item._id}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            inverted
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.1}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            initialNumToRender={20}
+            maxToRenderPerBatch={20}
+            windowSize={10}
+            ListHeaderComponent={
+              isPeerTyping ? <TypingIndicator /> : <View style={{ height: spacing.sm }} />
+            }
+            ListFooterComponent={
+              loadingMore ? (
+                <ActivityIndicator size="small" color={colors.textSecondary} style={styles.loader} />
+              ) : hasMore === false && messages.length > 0 ? (
+                <Text style={styles.noMoreText}>Đầu cuộc hội thoại</Text>
+              ) : null
+            }
+            ListEmptyComponent={
+              !loading ? (
+                <View style={styles.emptyContainer}>
+                  <Image source={{ uri: avatar || 'https://ui-avatars.com/api/?name=User' }} style={styles.emptyAvatar} />
+                  <Text style={styles.emptyTitle}>{name}</Text>
+                  <Text style={styles.emptySubtitle}>Các bạn đã kết nối trên VibeCheck</Text>
+                  <TouchableOpacity style={styles.viewProfileBtn}>
+                    <Text style={styles.viewProfileText}>Xem trang cá nhân</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null
+            }
+          />
 
-        {/* Bottom Input Area */}
-        <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
-          <TouchableOpacity style={styles.addButton}>
-            <Icon name="add" size={24} color="#00F0FF" />
-          </TouchableOpacity>
+          {loading && (
+            <View style={styles.initialLoader}>
+              <ActivityIndicator size="large" color={colors.messengerBlue} />
+            </View>
+          )}
 
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Type a message..."
-              placeholderTextColor="rgba(255, 255, 255, 0.4)"
-              value={inputText}
-              onChangeText={setInputText}
-              multiline
-            />
-            <TouchableOpacity style={styles.emojiButton}>
-              <Icon name="happy-outline" size={20} color="#00F0FF" />
+          <Animated.View 
+            style={[
+              styles.scrollDownWrapper,
+              {
+                opacity: scrollBtnAnim,
+                transform: [{ translateY: scrollBtnAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }]
+              }
+            ]}
+          >
+            <TouchableOpacity style={styles.scrollDownPill} onPress={jumpToBottom} activeOpacity={0.8}>
+              <View style={styles.pillIconBg}><Icon name="arrow-down" size={14} color={colors.white} /></View>
+              <Text style={styles.pillText}>Tin nhắn mới</Text>
+              <View style={styles.unreadBadgeMini} />
             </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-            <Icon name="paper-plane" size={20} color="#121212" />
-          </TouchableOpacity>
+          </Animated.View>
         </View>
+
+        {isBlocked ? (
+          <View style={styles.blockedBanner}>
+            <Text style={styles.blockedText}>Bạn đã chặn người dùng này. Bỏ chặn để gửi tin nhắn.</Text>
+          </View>
+        ) : (
+          <ChatInput
+            onSend={(content) => sendMessage(content)}
+            onTyping={(status) => sendTypingStatus(status)}
+            replyingTo={replyingTo}
+            onCancelReply={() => setReplyingTo(null)}
+            bottomInset={insets.bottom}
+          />
+        )}
       </KeyboardAvoidingView>
+
+      <MessageActionModal
+        visible={reactionModalVisible}
+        onClose={() => setReactionModalVisible(false)}
+        onSelectEmoji={onSelectEmoji}
+        onActionPress={handleActionPress}
+        isMyMessage={selectedMessage?.isMe}
+        isRecalled={selectedMessage?.isRecalled?.status}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0B1919', // Dark Cyberpunk Green/Black
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  container: { flex: 1, backgroundColor: colors.bgDark },
+  keyboardView: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md_sm, height: 56, borderBottomWidth: 0.5, borderBottomColor: colors.surfaceHigh },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  backButton: { padding: spacing.xs, marginRight: spacing.sm },
+  headerAvatar: { width: 32, height: 32, borderRadius: 16 },
+  avatarContainer: { position: 'relative', marginRight: spacing.sm_md },
+  onlineBadge: { position: 'absolute', bottom: 0, right: 0, width: 10, height: 10, borderRadius: 5, backgroundColor: colors.neonGreen, borderWidth: 2, borderColor: colors.bgDark, shadowColor: colors.neonGreen, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 4, elevation: 4 },
+  headerInfo: { justifyContent: 'center' },
+  headerName: { color: colors.white, fontSize: 15, fontWeight: 'bold' },
+  headerStatus: { color: colors.textSecondary, fontSize: 11 },
+  headerStatusOnline: { color: colors.neonGreen, fontWeight: '500' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  headerIcon: { padding: 2 },
+  listWrapper: { flex: 1, position: 'relative' },
+  listContent: { paddingVertical: spacing.md_sm },
+  initialLoader: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.bgDark, justifyContent: 'center', alignItems: 'center', zIndex: 200 },
+  loader: { marginVertical: spacing.lg },
+  noMoreText: { color: colors.textSecondary, fontSize: 12, textAlign: 'center', marginVertical: spacing.lg, opacity: 0.6 },
+  dividerContainer: { alignItems: 'center', marginVertical: spacing.md, paddingHorizontal: spacing.lg },
+  dividerText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600', backgroundColor: 'rgba(255, 255, 255, 0.05)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
+  scrollDownWrapper: { position: 'absolute', bottom: spacing.md, left: 0, right: 0, alignItems: 'center', zIndex: 100 },
+  scrollDownPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceHigh, paddingLeft: spacing.xs, paddingRight: spacing.md, paddingVertical: spacing.xs, borderRadius: br.full, borderWidth: 1, borderColor: colors.surfacePill, elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8 },
+  pillIconBg: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.messengerBlue, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm },
+  pillText: { color: colors.white, fontSize: 13, fontWeight: '600' },
+  unreadBadgeMini: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.messengerBlue, marginLeft: spacing.xs },
+  emptyContainer: { alignItems: 'center', paddingTop: spacing.xxl, paddingHorizontal: spacing.xxl, transform: [{ scaleY: -1 }] },
+  emptyAvatar: { width: 80, height: 80, borderRadius: 40, marginBottom: spacing.md },
+  emptyTitle: { color: colors.white, fontSize: 20, fontWeight: 'bold', marginBottom: spacing.xs },
+  emptySubtitle: { color: colors.textSecondary, fontSize: 14, textAlign: 'center', marginBottom: spacing.lg },
+  viewProfileBtn: { backgroundColor: colors.surfaceHigh, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: br.sm },
+  viewProfileText: { color: colors.white, fontWeight: 'bold', fontSize: 14 },
+  blockedBanner: {
+    backgroundColor: colors.surfaceHigh,
+    padding: spacing.md,
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(11, 25, 25, 0.9)',
-    borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerCenter: {
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusOnline: {
-    backgroundColor: '#00F0FF',
-    shadowColor: '#00F0FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  statusOffline: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  statusTextHeader: {
-    fontSize: 10,
-    color: '#00F0FF',
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  moreButton: {
-    padding: 4,
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    gap: 16,
-  },
-  messageContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 10,
-    maxWidth: '85%',
-  },
-  messageLeft: {
-    alignSelf: 'flex-start',
-  },
-  messageRight: {
-    alignSelf: 'flex-end',
-    flexDirection: 'row-reverse',
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  bubbleContent: {
-    flex: 1,
-    gap: 4,
-  },
-  senderName: {
-    fontSize: 10,
-    color: 'rgba(255, 255, 255, 0.4)',
-    marginLeft: 4,
-  },
-  bubble: {
-    padding: 12,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  bubblePartner: {
-    backgroundColor: 'rgba(30, 45, 45, 0.6)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-    borderBottomLeftRadius: 4,
-  },
-  bubbleUser: {
-    backgroundColor: 'rgba(0, 240, 255, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 240, 255, 0.2)',
-    borderBottomRightRadius: 4,
-  },
-  messageText: {
-    fontSize: 14,
-    color: '#E2E8F0',
-    lineHeight: 20,
-  },
-  messageImage: {
-    width: 240,
-    height: 180,
-    borderRadius: 12,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    gap: 4,
-    marginRight: 4,
-  },
-  statusText: {
-    fontSize: 10,
-    color: '#00F0FF',
-  },
-  typingIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 8,
-    paddingLeft: 46, // align with bubble
-  },
-  typingDotContainer: {
-    flexDirection: 'row',
-    gap: 3,
-  },
-  typingDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
-  },
-  typingText: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.4)',
-    fontStyle: 'italic',
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    backgroundColor: 'rgba(11, 25, 25, 0.95)',
+    justifyContent: 'center',
     borderTopWidth: 0.5,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+    borderTopColor: colors.surfacePill,
   },
-  addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(30, 45, 45, 0.5)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  inputContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(30, 45, 45, 0.5)',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 240, 255, 0.2)',
-  },
-  input: {
-    flex: 1,
-    paddingVertical: 8,
-    color: '#FFFFFF',
-    fontSize: 14,
-    maxHeight: 80,
-  },
-  emojiButton: {
-    padding: 4,
-  },
-  sendButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#00F0FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#00F0FF',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 100,
-  },
-  emptyText: {
-    color: 'rgba(255, 255, 255, 0.4)',
-    fontSize: 14,
-    fontStyle: 'italic',
-  },
-  storyReplyWrapper: {
-    gap: 8,
-  },
-  storyReferenceCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 8,
-    padding: 6,
-    gap: 8,
-    marginBottom: 4,
-  },
-  storyThumb: {
-    width: 32,
-    height: 48,
-    borderRadius: 4,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  storyReplyTitle: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontStyle: 'italic',
-    flexShrink: 1,
+  blockedText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    textAlign: 'center',
   },
 });
