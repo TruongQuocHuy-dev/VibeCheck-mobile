@@ -8,10 +8,10 @@ import {
   TextInput,
   ActivityIndicator,
   Modal,
-  KeyboardAvoidingView,
   Platform,
   StatusBar,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useFeed } from '../../application/hooks/useFeed';

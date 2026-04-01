@@ -8,10 +8,10 @@ import {
   TextInput,
   FlatList,
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../../../../core/theme/colors';
 import { spacing, borderRadius } from '../../../../core/theme/spacing';

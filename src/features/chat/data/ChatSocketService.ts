@@ -76,6 +76,14 @@ class ChatSocketService {
   emitStopTyping(conversationId: string) {
     emitSocketEvent('stop_typing', conversationId);
   }
+
+  onUserBlocked(callback: (payload: { targetUserId: string; isBlocked: boolean; blockedByMe: boolean }) => void) {
+    onSocketEvent('user_blocked', callback);
+  }
+
+  offUserBlocked(callback: (payload: { targetUserId: string; isBlocked: boolean; blockedByMe: boolean }) => void) {
+    offSocketEvent('user_blocked', callback);
+  }
 }
 
 export const chatSocketService = new ChatSocketService();

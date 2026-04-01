@@ -41,4 +41,13 @@ export const ProfileService = {
   getMockAvatar: (): string => {
     return 'https://avatar.iran.liara.run/public/boy';
   },
+
+  /**
+   * Get another user's public profile.
+   */
+  getPublicProfile: async (id: string): Promise<any> => {
+    const url = ENDPOINTS.USER.PUBLIC_PROFILE(id);
+    const data = await apiClient.get<any, any>(url);
+    return data?.user || data;
+  },
 };

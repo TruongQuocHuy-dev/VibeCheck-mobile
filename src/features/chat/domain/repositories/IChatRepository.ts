@@ -59,4 +59,24 @@ export interface IChatRepository {
    * Block a user.
    */
   blockUser(userId: string): Promise<void>;
+
+  /**
+   * Unblock a user.
+   */
+  unblockUser(userId: string): Promise<void>;
+
+  /**
+   * Pin a conversation for the current user.
+   */
+  pinConversation(conversationId: string): Promise<void>;
+
+  /**
+   * Unpin a conversation for the current user.
+   */
+  unpinConversation(conversationId: string): Promise<void>;
+
+  /**
+   * Mark a conversation as unread.
+   */
+  markAsUnread(conversationId: string): Promise<void>;
 }

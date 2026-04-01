@@ -35,4 +35,5 @@ export interface UserProfile {
   currentVibe?: CurrentVibe;
   premiumPlan: PremiumPlan;
   pastVibes: PastVibeItem[];
+  blockedByMe?: boolean;
 }

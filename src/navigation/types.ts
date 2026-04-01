@@ -22,10 +22,11 @@ export type RootStackParamList = {
     name: string;
     age: number;
     avatar: string;
+    conversationId?: string;
     isOnline?: boolean;
   };
-  ChatDetail: { conversationId: string; name: string; avatar: string | null; isOnline: boolean; otherUserId: string; lastActive?: string | null };
-  ChatInfo: { conversationId: string; userId: string; name: string; avatar: string | null; bio?: string | null };
+  ChatDetail: { conversationId: string; name: string; avatar: string | null; isOnline: boolean; otherUserId: string; lastActive?: string | null; blockedByMe?: boolean };
+  ChatInfo: { conversationId: string; userId: string; name: string; avatar: string | null; bio?: string | null; blockedByMe?: boolean };
   DiscoveryDetail: { candidates: Candidate[]; initialIndex: number; filters?: DiscoveryFilters };
   MatchReveal: {
     matchedUserName: string;

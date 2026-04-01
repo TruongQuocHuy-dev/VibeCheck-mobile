@@ -9,6 +9,9 @@ import {
   clearConversationApi,
   getChatMediaApi,
   blockUserApi,
+  unblockUserApi,
+  pinConversationApi,
+  markAsUnreadApi,
 } from '../../../infrastructure/services/chat.service';
 
 export class ChatRepository implements IChatRepository {
@@ -48,6 +51,23 @@ export class ChatRepository implements IChatRepository {
 
   async blockUser(userId: string): Promise<void> {
     await blockUserApi(userId);
+  }
+
+  async unblockUser(userId: string): Promise<void> {
+    await unblockUserApi(userId);
+  }
+
+  async pinConversation(conversationId: string): Promise<void> {
+    await pinConversationApi(conversationId);
+  }
+
+  async unpinConversation(conversationId: string): Promise<void> {
+    // Both pin/unpin use togglePinConversation on backend
+    await pinConversationApi(conversationId);
+  }
+
+  async markAsUnread(conversationId: string): Promise<void> {
+    await markAsUnreadApi(conversationId);
   }
 }
 

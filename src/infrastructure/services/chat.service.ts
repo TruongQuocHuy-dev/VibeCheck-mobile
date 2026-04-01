@@ -94,7 +94,31 @@ export const getChatMediaApi = async (
 /**
  * Block a user.
  */
-export const blockUserApi = async (userId: string): Promise<void> => {
-  const url = ENDPOINTS.USER.BLOCK_USER(userId);
-  await apiClient.post(url);
+export const blockUserApi = async (targetUserId: string): Promise<void> => {
+  const url = ENDPOINTS.USER.BLOCK;
+  await apiClient.post(url, { targetUserId });
+};
+
+/**
+ * Unblock a user.
+ */
+export const unblockUserApi = async (targetUserId: string): Promise<void> => {
+  const url = ENDPOINTS.USER.UNBLOCK;
+  await apiClient.post(url, { targetUserId });
+};
+
+/**
+ * Pin a conversation.
+ */
+export const pinConversationApi = async (conversationId: string): Promise<void> => {
+  const url = ENDPOINTS.CONVERSATIONS.PIN(conversationId);
+  await apiClient.patch(url);
+};
+
+/**
+ * Mark a conversation as unread.
+ */
+export const markAsUnreadApi = async (conversationId: string): Promise<void> => {
+  const url = ENDPOINTS.CONVERSATIONS.UNREAD(conversationId);
+  await apiClient.patch(url);
 };

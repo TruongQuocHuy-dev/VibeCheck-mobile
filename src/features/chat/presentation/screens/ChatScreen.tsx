@@ -17,9 +17,24 @@ import { useChat } from '../../application/hooks/useChat';
 import { ConversationItem } from '../../domain/types/chat.types';
 import { spacing, typography } from '../../../../core/theme';
 
+import { ChatActionModal } from '../components/ChatActionModal';
+
 export const ChatScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
-  const { chatList, loading, handleChatPress, handleEdit, refreshList } = useChat();
+  const { 
+    chatList, 
+    loading, 
+    handleChatPress, 
+    handleEdit, 
+    refreshList,
+    pinConversation,
+    unpinConversation,
+    markAsUnread,
+    deleteConversation,
+  } = useChat();
+
+  const [selectedChat, setSelectedChat] = React.useState<ConversationItem | null>(null);
+  const [modalVisible, setModalVisible] = React.useState(false);
 
   // Refresh list whenever the screen comes into focus (e.g. back from detail)
   useFocusEffect(
@@ -27,6 +42,33 @@ export const ChatScreen: React.FC = () => {
       refreshList();
     }, [refreshList])
   );
+
+  const handleLongPress = (item: ConversationItem) => {
+    setSelectedChat(item);
+    setModalVisible(true);
+  };
+
+  const handleAction = (action: 'pin' | 'unpin' | 'unread' | 'block' | 'delete') => {
+    if (!selectedChat) return;
+    
+    switch (action) {
+      case 'pin':
+        pinConversation(selectedChat.id);
+        break;
+      case 'unpin':
+        unpinConversation(selectedChat.id);
+        break;
+      case 'unread':
+        markAsUnread(selectedChat.id);
+        break;
+      case 'delete':
+        deleteConversation(selectedChat.id);
+        break;
+      case 'block':
+        // Block logic (can be added to useChat as well)
+        break;
+    }
+  };
 
   const renderChatItem = ({ item }: { item: ConversationItem }) => {
     const isOnline = item.user?.isOnline ?? false;
@@ -51,17 +93,32 @@ export const ChatScreen: React.FC = () => {
     return (
       <TouchableOpacity
         style={styles.chatItem}
-        onPress={() => handleChatPress(item.id, fullName, avatar, isOnline, item.user?._id, item.user?.lastActive)}
+        onPress={() => handleChatPress(
+          item.id, 
+          fullName, 
+          avatar, 
+          isOnline, 
+          item.user?._id, 
+          item.user?.lastActive,
+          item.blockedByMe,
+          item.isBlockedByOther
+        )}
+        onLongPress={() => handleLongPress(item)}
         activeOpacity={0.7}
       >
         <View style={styles.avatarContainer}>
           <Image source={{ uri: avatar }} style={styles.avatar} />
           {isOnline && <View style={styles.onlineBadge} />}
+          {item.isPinned && (
+            <View style={styles.pinnedIndicator}>
+              <Icon name="pin" size={10} color={colors.white} />
+            </View>
+          )}
         </View>
 
         <View style={styles.chatInfo}>
           <View style={styles.chatHeader}>
-            <Text style={styles.chatName} numberOfLines={1}>
+            <Text style={[styles.chatName, item.isPinned && styles.chatNamePinned]} numberOfLines={1}>
               {fullName}
             </Text>
             <Text style={styles.chatTime}>{timeDisplay}</Text>
@@ -148,6 +205,15 @@ export const ChatScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      <ChatActionModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onAction={handleAction}
+        isPinned={selectedChat?.isPinned ?? false}
+        isBlocked={selectedChat?.blockedByMe ?? false}
+        userName={selectedChat?.user?.fullName ?? ''}
+      />
     </View>
   );
 };
@@ -244,10 +310,24 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 8,
   },
+  chatNamePinned: {
+    color: colors.messengerBlue,
+  },
   chatTime: {
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.4)',
     fontFamily: 'Outfit-Regular',
+  },
+  pinnedIndicator: {
+    position: 'absolute',
+    top: -2,
+    left: -2,
+    backgroundColor: colors.messengerBlue,
+    padding: 3,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: colors.bgDark,
+    zIndex: 10,
   },
   messageRow: {
     flexDirection: 'row',

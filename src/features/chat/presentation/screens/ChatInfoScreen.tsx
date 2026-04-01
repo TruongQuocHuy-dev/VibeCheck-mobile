@@ -25,13 +25,28 @@ const IMAGE_SIZE = (width - spacing.md * 2 - spacing.xs * (COLUMN_COUNT - 1)) / 
 export const ChatInfoScreen: React.FC = () => {
   const route = useRoute<any>();
   const navigation = useNavigation();
-  const { conversationId, userId, name, avatar, bio } = route.params || {};
+  const { conversationId, userId, name, avatar, bio, blockedByMe: initialBlockedByMe } = route.params || {};
 
   const {
     getMedia,
     clearHistory,
     blockUser,
-  } = useChatDetail(conversationId, { otherUserId: userId, isOnline: false, lastActive: null });
+    blockedByMe,
+  } = useChatDetail(conversationId, { 
+    otherUserId: userId, 
+    isOnline: false, 
+    lastActive: null,
+    blockedByMe: initialBlockedByMe
+  });
+
+  const handleViewProfile = () => {
+    (navigation as any).navigate('MatchProfile', {
+      id: userId,
+      name: name,
+      avatar: avatar,
+      conversationId: conversationId,
+    });
+  };
 
   const [media, setMedia] = useState<Message[]>([]);
   const [loadingMedia, setLoadingMedia] = useState(true);
@@ -66,8 +81,8 @@ export const ChatInfoScreen: React.FC = () => {
           onPress: async () => {
             try {
               await clearHistory();
-              Alert.alert('Thành công', 'Đã xóa lịch sử trò chuyện.');
-              setMedia([]);
+              // Navigate back to Chat list after clearing (deleting) chat (casting to any to avoid type complexity with nested screens)
+              (navigation as any).navigate('Main', { screen: 'Chat' });
             } catch (err) {
               Alert.alert('Lỗi', 'Không thể xóa lịch sử trò chuyện.');
             }
@@ -84,14 +99,13 @@ export const ChatInfoScreen: React.FC = () => {
       [
         { text: 'Hủy', style: 'cancel' },
         { 
-          text: 'Chặn', 
+          text: blockedByMe ? 'Bỏ chặn' : 'Chặn', 
           style: 'destructive',
           onPress: async () => {
             try {
-              await blockUser();
-              Alert.alert('Thành công', `Đã chặn ${name}.`);
+              await blockUser(); // useChatDetail's blockUser toggles blockedByMe
             } catch (err) {
-              Alert.alert('Lỗi', 'Không thể chặn người dùng.');
+              Alert.alert('Lỗi', 'Không thể thực hiện tác vụ.');
             }
           }
         },
@@ -127,16 +141,24 @@ export const ChatInfoScreen: React.FC = () => {
         numColumns={COLUMN_COUNT}
         ListHeaderComponent={
           <View style={styles.profileSection}>
-            <Image source={{ uri: avatar }} style={styles.avatar} />
+            <TouchableOpacity onPress={handleViewProfile}>
+              <Image source={{ uri: avatar }} style={styles.avatar} />
+            </TouchableOpacity>
             <Text style={styles.name}>{name}</Text>
             {bio && <Text style={styles.bio}>{bio}</Text>}
 
+            <TouchableOpacity style={styles.viewProfileMainBtn} onPress={handleViewProfile}>
+              <Text style={styles.viewProfileMainText}>Xem trang cá nhân</Text>
+            </TouchableOpacity>
+
             <View style={styles.actionRow}>
               <TouchableOpacity style={styles.actionBtn} onPress={handleBlock}>
-                <View style={[styles.iconBg, { backgroundColor: 'rgba(255, 69, 58, 0.1)' }]}>
-                  <Icon name="ban" size={20} color={colors.error} />
+                <View style={[styles.iconBg, { backgroundColor: blockedByMe ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 69, 58, 0.1)' }]}>
+                  <Icon name={blockedByMe ? 'checkmark-circle-outline' : 'close-circle-outline'} size={20} color={blockedByMe ? colors.neonGreen : colors.error} />
                 </View>
-                <Text style={[styles.actionLabel, { color: colors.error }]}>Chặn</Text>
+                <Text style={[styles.actionLabel, { color: blockedByMe ? colors.neonGreen : colors.error }]}>
+                  {blockedByMe ? 'Bỏ chặn' : 'Chặn'}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.actionBtn} onPress={handleClearChat}>
@@ -236,4 +258,18 @@ const styles = StyleSheet.create({
   },
   emptyContainer: { alignItems: 'center', marginTop: spacing.xxl },
   emptyText: { color: colors.textSecondary, fontSize: 14, marginTop: spacing.md },
+  viewProfileMainBtn: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  viewProfileMainText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '600',
+  },
 });

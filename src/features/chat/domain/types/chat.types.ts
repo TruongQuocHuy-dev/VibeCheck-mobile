@@ -34,6 +34,10 @@ export interface ConversationItem {
   lastMessage: string;
   lastMessageAt: string | null;
   unreadCount: number;
+  isPinned: boolean;
+  clearedAt?: string | null;
+  blockedByMe?: boolean;
+  isBlockedByOther?: boolean;
 }
 
 export interface Reaction {

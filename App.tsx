@@ -14,20 +14,24 @@ import { LoadingProvider } from './src/shared/providers/LoadingProvider';
 import { NetworkProvider } from './src/shared/providers/NetworkProvider';
 import { UnreadProvider } from './src/shared/providers/UnreadProvider';
 
+import { KeyboardProvider } from 'react-native-keyboard-controller';
+
 function App() {
   return (
     <ErrorBoundary>
-      <ToastProvider>
-        <LoadingProvider>
-          <NetworkProvider>
-            <UnreadProvider>
-              <NavigationContainer>
-                <AppNavigator />
-              </NavigationContainer>
-            </UnreadProvider>
-          </NetworkProvider>
-        </LoadingProvider>
-      </ToastProvider>
+      <KeyboardProvider>
+        <ToastProvider>
+          <LoadingProvider>
+            <NetworkProvider>
+              <UnreadProvider>
+                <NavigationContainer>
+                  <AppNavigator />
+                </NavigationContainer>
+              </UnreadProvider>
+            </NetworkProvider>
+          </LoadingProvider>
+        </ToastProvider>
+      </KeyboardProvider>
     </ErrorBoundary>
   );
 }

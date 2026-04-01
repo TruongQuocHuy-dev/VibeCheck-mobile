@@ -7,6 +7,9 @@ import { UserProfile } from '../../domain/types/profile.types';
 import { getMatchProfileDetail } from '../../../matches/data/match-profile.data';
 import apiClient from '../../../../infrastructure/api/axios';
 import { ENDPOINTS } from '../../../../infrastructure/api/endpoints';
+import { ProfileService } from '../../../../infrastructure/services/profile.service';
+import { chatSocketService } from '../../../chat/data/ChatSocketService';
+import { chatRepository } from '../../../chat/data/ChatRepository';
 
 type ProfileNavigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -15,8 +18,10 @@ export const useProfile = () => {
   const route = useRoute();
 
   const [ownProfileData, setOwnProfileData] = useState<any>(null);
+  const [matchProfileData, setMatchProfileData] = useState<any>(null);
   const [ownVibeStories, setOwnVibeStories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isBlockedByOther, setIsBlockedByOther] = useState(false);
 
   const matchParams = (route.params || {}) as Partial<RootStackParamList['MatchProfile']>;
   const isMatchProfile = Boolean(matchParams.id && matchParams.name && matchParams.avatar);
@@ -24,56 +29,110 @@ export const useProfile = () => {
 
   const fetchProfile = useCallback(async () => {
     setLoading(true);
+    setIsBlockedByOther(false);
     try {
-      const [userRes, storiesRes]: any = await Promise.all([
-        apiClient.get(ENDPOINTS.USER.GET_PROFILE),
-        apiClient.get(ENDPOINTS.VIBE_STORIES.FEED),
-      ]);
-      setOwnProfileData(userRes?.user || userRes); // safely unwrap
-      
-      const userId = userRes?.user?._id || userRes?.id;
-      const ownStoryGroup = (storiesRes.data?.data?.feed || []).find((group: any) => group.user.id === userId);
-      setOwnVibeStories(ownStoryGroup ? ownStoryGroup.stories : []);
+      if (isOwnProfile) {
+        const [userRes, storiesRes]: any = await Promise.all([
+          apiClient.get(ENDPOINTS.USER.GET_PROFILE),
+          apiClient.get(ENDPOINTS.VIBE_STORIES.FEED),
+        ]);
+        setOwnProfileData(userRes?.user || userRes);
+        
+        const userId = userRes?.user?._id || userRes?.id;
+        const ownStoryGroup = (storiesRes.data?.data?.feed || []).find((group: any) => group.user.id === userId);
+        setOwnVibeStories(ownStoryGroup ? ownStoryGroup.stories : []);
+      } else if (matchParams.id) {
+        try {
+          const data = await ProfileService.getPublicProfile(matchParams.id);
+          setMatchProfileData(data);
+        } catch (err: any) {
+          if (err?.status === 404 || err?.status === 403) {
+            setIsBlockedByOther(true);
+          }
+          console.log('Error fetching match profile:', err);
+        }
+      }
     } catch (err) {
       console.log('Error fetching profile or stories:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isOwnProfile, matchParams.id]);
 
   useEffect(() => {
+    fetchProfile(); // initial fetch
+    
     if (isOwnProfile) {
       const unsubscribe = navigation.addListener('focus', fetchProfile);
-      fetchProfile(); // initial fetch
       return unsubscribe;
     }
   }, [isOwnProfile, navigation, fetchProfile]);
 
+  // Real-time block listener
+  useEffect(() => {
+    const handleBlockEvent = (data: { targetUserId: string; isBlocked: boolean; blockedByMe: boolean }) => {
+      if (isMatchProfile && data.targetUserId === matchParams.id) {
+        if (data.isBlocked) {
+          if (data.blockedByMe) {
+            setMatchProfileData((prev: any) => ({ ...prev, blockedByMe: true }));
+          } else {
+            setIsBlockedByOther(true);
+          }
+        } else {
+          // Unblocked
+          fetchProfile();
+        }
+      }
+    };
+
+    chatSocketService.onUserBlocked(handleBlockEvent);
+    return () => chatSocketService.offUserBlocked(handleBlockEvent);
+  }, [isMatchProfile, matchParams.id, fetchProfile]);
+
   const profile = useMemo<UserProfile>(() => {
     if (isMatchProfile) {
+      const apiData = matchProfileData;
       const matchDetail = getMatchProfileDetail(matchParams.id as string);
-      const displayName = (matchParams.name as string) || 'User';
+      const displayName = apiData?.fullName || apiData?.displayName || (matchParams.name as string) || 'User';
+      const blockedByMe = apiData?.blockedByMe || false;
+
+      const baseProfile = {
+        id: matchParams.id as string,
+        username: apiData?.displayName ? `@${apiData.displayName}` : `@${displayName}`,
+        handle: displayName.toLowerCase().replace(/\s+/g, '.'),
+        avatar: apiData?.avatar || (matchParams.avatar as string),
+        isVerified: false,
+        blockedByMe,
+        premiumPlan: profileMockData.premiumPlan,
+      };
+
+      if (blockedByMe) {
+        return {
+          ...baseProfile,
+          stats: [],
+          currentVibe: undefined as any,
+          pastVibes: [],
+          bio: `Bạn đã chặn ${displayName}`,
+        };
+      }
 
       return {
-        id: matchParams.id as string,
-        username: `@${displayName}`,
-        handle: displayName.toLowerCase().replace(/\s+/g, '.'),
-        avatar: matchParams.avatar as string,
-        isVerified: false,
+        ...baseProfile,
+        bio: apiData?.bio || matchDetail.bio,
         stats: [
           { id: 'stats-distance', label: 'Distance', value: matchDetail.distanceKm },
-          { id: 'stats-vibes', label: 'Vibes', value: matchDetail.recentVibePhotos.length },
+          { id: 'stats-vibes', label: 'Vibes', value: apiData?.photos?.length || matchDetail.recentVibePhotos.length },
           { id: 'stats-likes', label: 'Likes', value: 0 },
           { id: 'stats-common', label: 'Common', value: matchDetail.interests.length },
         ],
         currentVibe: {
           id: `${matchDetail.id}-current-vibe`,
-          text: matchDetail.bio,
+          text: apiData?.bio || matchDetail.bio,
           expiresIn: 'Con 12h',
-          backgroundImage: matchDetail.recentVibePhotos[0] || profileMockData.currentVibe?.backgroundImage || '',
+          backgroundImage: apiData?.photos?.[0] || matchDetail.recentVibePhotos[0] || profileMockData.currentVibe?.backgroundImage || '',
         },
         premiumPlan: profileMockData.premiumPlan,
-        pastVibes: matchDetail.recentVibePhotos.map((image, index) => ({
+        pastVibes: (apiData?.photos || matchDetail.recentVibePhotos).map((image: string, index: number) => ({
           id: `${matchDetail.id}-photo-${index}`,
           image,
           statusLabel: 'Dang hoat dong',
@@ -151,12 +210,25 @@ export const useProfile = () => {
     }
 
     navigation.navigate('ChatDetail', {
-      conversationId: matchParams.id,
+      conversationId: matchParams.conversationId || matchParams.id, // Priority to conversationId
       name: matchParams.name,
       avatar: matchParams.avatar,
       isOnline: Boolean(matchParams.isOnline),
+      otherUserId: matchParams.id, // userId
+      blockedByMe: profile.blockedByMe,
     });
-  }, [isOwnProfile, matchParams.avatar, matchParams.id, matchParams.isOnline, matchParams.name, navigation]);
+  }, [isOwnProfile, matchParams.avatar, matchParams.id, matchParams.isOnline, matchParams.name, navigation, profile.blockedByMe]);
+
+  const handleUnblock = useCallback(async () => {
+    if (!matchParams.id) return;
+    try {
+      await chatRepository.unblockUser(matchParams.id);
+      setMatchProfileData((prev: any) => ({ ...prev, blockedByMe: false }));
+      fetchProfile();
+    } catch (err) {
+      console.log('Unblock error:', err);
+    }
+  }, [matchParams.id, fetchProfile]);
 
   return {
     profile,
@@ -171,6 +243,8 @@ export const useProfile = () => {
     handleEditAvatar,
     handleUpgradePress,
     handleMessagePress,
+    handleUnblock,
+    isBlockedByOther,
     ownVibeStories,
     handleOwnStoryPress: () => {
       if (ownVibeStories.length > 0) {

@@ -39,6 +39,8 @@ export const ProfileScreen: React.FC = () => {
     handleEditAvatar,
     handleUpgradePress,
     handleMessagePress,
+    handleUnblock,
+    isBlockedByOther,
     ownVibeStories,
     handleOwnStoryPress,
   } = useProfile();
@@ -51,6 +53,26 @@ export const ProfileScreen: React.FC = () => {
         <StatusBar barStyle="light-content" backgroundColor={colors.bgDark} />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isBlockedByOther) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={colors.bgDark} />
+        <View style={styles.header}>
+          <TouchableOpacity style={[styles.iconButton, { marginLeft: spacing.lg }]} activeOpacity={0.85} onPress={handleBack}>
+            <Icon name="arrow-back" size={spacing.lg} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}></Text>
+          <View style={styles.headerSide} />
+        </View>
+        <View style={styles.unavailableContainer}>
+          <Icon name="person-circle-outline" size={80} color={colors.textSecondary} />
+          <Text style={styles.unavailableTitle}>Người dùng này không khả dụng</Text>
+          <Text style={styles.unavailableSubtitle}>Liên kết bạn theo dõi có thể đã bị hỏng hoặc người dùng đã chặn bạn.</Text>
         </View>
       </SafeAreaView>
     );
@@ -73,7 +95,7 @@ export const ProfileScreen: React.FC = () => {
             )}
           </View>
 
-          <Text style={styles.headerTitle}>{isOwnProfile ? 'Trang cá nhân' : 'Match Profile'}</Text>
+          <Text style={styles.headerTitle}>{isOwnProfile ? 'Trang cá nhân' : ''}</Text>
 
           <View style={[styles.headerSide, styles.headerSideRight]}>
             {isOwnProfile ? (
@@ -81,9 +103,11 @@ export const ProfileScreen: React.FC = () => {
                 <Icon name="settings-outline" size={spacing.lg} color={colors.textPrimary} />
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity style={styles.messageButton} activeOpacity={0.9} onPress={handleMessagePress}>
-                <Icon name="chatbubble-ellipses" size={spacing.md} color={colors.white} />
-              </TouchableOpacity>
+              !profile.blockedByMe && (
+                <TouchableOpacity style={styles.messageButton} activeOpacity={0.9} onPress={handleMessagePress}>
+                  <Icon name="chatbubble-ellipses" size={spacing.md} color={colors.white} />
+                </TouchableOpacity>
+              )
             )}
           </View>
         </View>
@@ -124,39 +148,55 @@ export const ProfileScreen: React.FC = () => {
               <Text style={styles.bioText} numberOfLines={2}>{profile.bio}</Text>
             </View>
           )}
-        </View>
 
-        <View style={styles.statsSection}>
-          {hasStats ? (
-            profile.stats.map((stat) => (
-              <ProfileStatItem key={stat.id} stat={stat} style={styles.statItem} />
-            ))
-          ) : (
-            <Text style={styles.emptyText}>Chua co thong ke de hien thi.</Text>
-          )}
-        </View>
+          {profile.blockedByMe && (
+            <View style={styles.blockedBanner}>
+              <Icon name="lock-closed" size={24} color={colors.error} />
+              <Text style={styles.blockedBannerText}>Bạn đã chặn người dùng này</Text>
+              <Text style={styles.blockedBannerSubtext}>VibeCheck sẽ ẩn các hoạt động và hình ảnh của họ để bảo vệ sự riêng tư của bạn.</Text>
 
-        <View style={styles.section}>
-          {profile.currentVibe ? (
-            <ImageBackground
-              source={{ uri: profile.currentVibe.backgroundImage }}
-              style={styles.currentVibeCard}
-              imageStyle={styles.currentVibeImage}
-              blurRadius={2}
-            >
-              <View style={styles.currentVibeOverlay}>
-                <View style={styles.currentVibePill}>
-                  <Text style={styles.currentVibePillText}>{profile.currentVibe.expiresIn}</Text>
-                </View>
-                <Text style={styles.currentVibeText}>{profile.currentVibe.text}</Text>
-              </View>
-            </ImageBackground>
-          ) : (
-            <View style={styles.emptyBlock}>
-              <Text style={styles.emptyText}>Ban chua dang vibe nao.</Text>
+              <TouchableOpacity style={styles.unblockActionBtn} onPress={handleUnblock}>
+                <Text style={styles.unblockActionBtnText}>Bỏ chặn</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
+
+        {!profile.blockedByMe && (
+          <>
+            <View style={styles.statsSection}>
+              {hasStats ? (
+                profile.stats.map((stat) => (
+                  <ProfileStatItem key={stat.id} stat={stat} style={styles.statItem} />
+                ))
+              ) : (
+                <Text style={styles.emptyText}>Chua co thong ke de hien thi.</Text>
+              )}
+            </View>
+
+            <View style={styles.section}>
+              {profile.currentVibe ? (
+                <ImageBackground
+                  source={{ uri: profile.currentVibe.backgroundImage }}
+                  style={styles.currentVibeCard}
+                  imageStyle={styles.currentVibeImage}
+                  blurRadius={2}
+                >
+                  <View style={styles.currentVibeOverlay}>
+                    <View style={styles.currentVibePill}>
+                      <Text style={styles.currentVibePillText}>{profile.currentVibe.expiresIn}</Text>
+                    </View>
+                    <Text style={styles.currentVibeText}>{profile.currentVibe.text}</Text>
+                  </View>
+                </ImageBackground>
+              ) : (
+                <View style={styles.emptyBlock}>
+                  <Text style={styles.emptyText}>Ban chua dang vibe nao.</Text>
+                </View>
+              )}
+            </View>
+          </>
+        )}
 
         {isOwnProfile && (
           <View style={styles.section}>
@@ -194,20 +234,22 @@ export const ProfileScreen: React.FC = () => {
           </View>
         )}
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{isOwnProfile ? 'Vibe Da Dang' : 'Vibe gan day'}</Text>
-          {hasPastVibes ? (
-            <View style={styles.pastVibesGrid}>
-              {profile.pastVibes.map((item) => (
-                <PastVibeCard key={item.id} item={item} style={styles.pastVibeItem} />
-              ))}
-            </View>
-          ) : (
-            <View style={styles.emptyBlock}>
-              <Text style={styles.emptyText}>Lich su vibe trong.</Text>
-            </View>
-          )}
-        </View>
+        {!profile.blockedByMe && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{isOwnProfile ? 'Vibe Da Dang' : 'Vibe gan day'}</Text>
+            {hasPastVibes ? (
+              <View style={styles.pastVibesGrid}>
+                {profile.pastVibes.map((item) => (
+                  <PastVibeCard key={item.id} item={item} style={styles.pastVibeItem} />
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyBlock}>
+                <Text style={styles.emptyText}>Lich su vibe trong.</Text>
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -239,7 +281,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     textAlign: 'center',
-    fontSize: typography.sizes.xxl,
+    fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
     color: colors.textPrimary,
   },
@@ -468,5 +510,57 @@ const styles = StyleSheet.create({
     lineHeight: typography.sizes.lg,
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  unavailableContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xxl,
+    gap: spacing.lg,
+  },
+  unavailableTitle: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.textPrimary,
+    textAlign: 'center',
+  },
+  unavailableSubtitle: {
+    fontSize: typography.sizes.md,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  blockedBanner: {
+    marginTop: spacing.xl,
+    padding: spacing.xl,
+    backgroundColor: 'rgba(255, 69, 58, 0.05)',
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 69, 58, 0.1)',
+    alignItems: 'center',
+    gap: spacing.sm,
+    width: '100%',
+  },
+  blockedBannerText: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.textPrimary,
+  },
+  blockedBannerSubtext: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  unblockActionBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.full,
+  },
+  unblockActionBtnText: {
+    color: colors.white,
+    fontWeight: typography.weights.bold,
+    fontSize: typography.sizes.md,
   },
 });

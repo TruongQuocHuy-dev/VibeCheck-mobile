@@ -6,7 +6,6 @@ import {
   FlatList,
   TouchableOpacity,
   Image,
-  KeyboardAvoidingView,
   Platform,
   StatusBar,
   ActivityIndicator,
@@ -14,6 +13,7 @@ import {
   NativeSyntheticEvent,
   Animated,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -30,7 +30,7 @@ export const ChatDetailScreen: React.FC = () => {
   const route = useRoute<any>();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { conversationId, name, avatar, isOnline, otherUserId, lastActive } = route.params || {};
+  const { conversationId, name, avatar, isOnline, otherUserId, lastActive, blockedByMe: initialBlockedByMe, isBlockedByOther: initialIsBlockedByOther } = route.params || {};
 
   const {
     messages,
@@ -48,8 +48,18 @@ export const ChatDetailScreen: React.FC = () => {
     formatLastActive,
     isPeerTyping,
     sendTypingStatus,
-    isBlocked,
-  } = useChatDetail(conversationId, { isOnline, otherUserId, lastActive });
+    blockedByMe,
+    isBlockedByOther,
+    blockUser,
+  } = useChatDetail(conversationId, { 
+    isOnline, 
+    otherUserId, 
+    lastActive, 
+    blockedByMe: initialBlockedByMe,
+    isBlockedByOther: initialIsBlockedByOther
+  });
+
+  const isBlocked = blockedByMe || isBlockedByOther;
 
   const flatListRef = useRef<FlatList>(null);
   const isAtBottomRef = useRef(true);
@@ -142,6 +152,16 @@ export const ChatDetailScreen: React.FC = () => {
       userId: otherUserId,
       name,
       avatar,
+      blockedByMe,
+    });
+  };
+
+  const handleViewProfile = () => {
+    (navigation as any).navigate('MatchProfile', {
+      id: otherUserId,
+      name,
+      avatar,
+      conversationId,
     });
   };
 
@@ -192,13 +212,15 @@ export const ChatDetailScreen: React.FC = () => {
           </TouchableOpacity>
           <View style={styles.avatarContainer}>
             <Image source={{ uri: avatar }} style={styles.headerAvatar} />
-            {otherUserStatus.isOnline && <View style={styles.onlineBadge} />}
+            {otherUserStatus.isOnline && !isBlocked && <View style={styles.onlineBadge} />}
           </View>
           <View style={styles.headerInfo}>
             <Text style={styles.headerName}>{name}</Text>
-            <Text style={[styles.headerStatus, otherUserStatus.isOnline && styles.headerStatusOnline]}>
-              {otherUserStatus.isOnline ? 'Đang hoạt động' : formatLastActive(otherUserStatus.lastActive)}
-            </Text>
+            {!isBlocked && (
+              <Text style={[styles.headerStatus, otherUserStatus.isOnline && styles.headerStatusOnline]}>
+                {otherUserStatus.isOnline ? 'Đang hoạt động' : formatLastActive(otherUserStatus.lastActive)}
+              </Text>
+            )}
           </View>
         </View>
         <View style={styles.headerRight}>
@@ -210,8 +232,8 @@ export const ChatDetailScreen: React.FC = () => {
 
       <KeyboardAvoidingView
         style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
       >
         <View style={styles.listWrapper}>
           <FlatList
@@ -245,7 +267,7 @@ export const ChatDetailScreen: React.FC = () => {
                   <Image source={{ uri: avatar || 'https://ui-avatars.com/api/?name=User' }} style={styles.emptyAvatar} />
                   <Text style={styles.emptyTitle}>{name}</Text>
                   <Text style={styles.emptySubtitle}>Các bạn đã kết nối trên VibeCheck</Text>
-                  <TouchableOpacity style={styles.viewProfileBtn}>
+                  <TouchableOpacity style={styles.viewProfileBtn} onPress={handleViewProfile}>
                     <Text style={styles.viewProfileText}>Xem trang cá nhân</Text>
                   </TouchableOpacity>
                 </View>
@@ -276,9 +298,16 @@ export const ChatDetailScreen: React.FC = () => {
           </Animated.View>
         </View>
 
-        {isBlocked ? (
+        {blockedByMe ? (
           <View style={styles.blockedBanner}>
-            <Text style={styles.blockedText}>Bạn đã chặn người dùng này. Bỏ chặn để gửi tin nhắn.</Text>
+            <Text style={styles.blockedText}>Bạn đã chặn người dùng này. Bỏ chặn để nhắn tin.</Text>
+            <TouchableOpacity style={styles.unblockBtn} onPress={blockUser}>
+              <Text style={styles.unblockBtnText}>Bỏ chặn</Text>
+            </TouchableOpacity>
+          </View>
+        ) : isBlockedByOther ? (
+          <View style={styles.blockedBanner}>
+            <Text style={styles.blockedText}>Người này hiện không thể liên lạc được trên VibeCheck.</Text>
           </View>
         ) : (
           <ChatInput
@@ -330,23 +359,36 @@ const styles = StyleSheet.create({
   pillIconBg: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.messengerBlue, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm },
   pillText: { color: colors.white, fontSize: 13, fontWeight: '600' },
   unreadBadgeMini: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.messengerBlue, marginLeft: spacing.xs },
-  emptyContainer: { alignItems: 'center', paddingTop: spacing.xxl, paddingHorizontal: spacing.xxl, transform: [{ scaleY: -1 }] },
+  emptyContainer: { alignItems: 'center', paddingTop: spacing.xxl, paddingHorizontal: spacing.xxl, transform: [{ rotate: '180deg' }] },
   emptyAvatar: { width: 80, height: 80, borderRadius: 40, marginBottom: spacing.md },
   emptyTitle: { color: colors.white, fontSize: 20, fontWeight: 'bold', marginBottom: spacing.xs },
   emptySubtitle: { color: colors.textSecondary, fontSize: 14, textAlign: 'center', marginBottom: spacing.lg },
   viewProfileBtn: { backgroundColor: colors.surfaceHigh, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: br.sm },
   viewProfileText: { color: colors.white, fontWeight: 'bold', fontSize: 14 },
-  blockedBanner: {
-    backgroundColor: colors.surfaceHigh,
-    padding: spacing.md,
+  blockedBanner: { 
+    padding: spacing.md, 
+    backgroundColor: 'rgba(255, 255, 255, 0.05)', 
+    borderTopWidth: 1, 
+    borderTopColor: 'rgba(255, 255, 255, 0.1)', 
     alignItems: 'center',
-    justifyContent: 'center',
-    borderTopWidth: 0.5,
-    borderTopColor: colors.surfacePill,
+    paddingBottom: Platform.OS === 'ios' ? spacing.xl : spacing.md,
   },
-  blockedText: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    textAlign: 'center',
+  blockedText: { 
+    fontSize: 13, 
+    color: 'rgba(255, 255, 255, 0.5)', 
+    textAlign: 'center', 
+    marginBottom: spacing.sm, 
+    fontFamily: 'Outfit-Regular' 
+  },
+  unblockBtn: { 
+    backgroundColor: colors.messengerBlue, 
+    paddingHorizontal: spacing.lg, 
+    paddingVertical: spacing.xs, 
+    borderRadius: 20 
+  },
+  unblockBtnText: { 
+    color: colors.white, 
+    fontSize: 14, 
+    fontFamily: 'Outfit-SemiBold' 
   },
 });

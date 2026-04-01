@@ -44,7 +44,11 @@ apiClient.interceptors.response.use(
     }
     const message =
       error.response?.data?.message || error.message || 'Lỗi kết nối máy chủ';
-    return Promise.reject(new Error(message));
+    const enhancedError = new Error(message) as any;
+    enhancedError.status = error.response?.status;
+    enhancedError.data = error.response?.data;
+    
+    return Promise.reject(enhancedError);
   }
 );
 

@@ -12,7 +12,9 @@ import {
   ActivityIndicator,
   Modal,
   FlatList,
+  Platform,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Video from 'react-native-video';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -203,14 +205,24 @@ export const VibeDetailScreen: React.FC = () => {
 
       {detail.backgroundImage ? (
         <ImageBackground source={{ uri: detail.backgroundImage }} style={styles.storyBackground} blurRadius={0}>
-          {renderStoryContent()}
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            {renderStoryContent()}
+          </KeyboardAvoidingView>
         </ImageBackground>
       ) : (
         <LinearGradient
           colors={[colors.vibeGradientStart, colors.vibeGradientEnd]}
           style={styles.storyBackground}
         >
-          {renderStoryContent()}
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            {renderStoryContent()}
+          </KeyboardAvoidingView>
         </LinearGradient>
       )}
     </SafeAreaView>

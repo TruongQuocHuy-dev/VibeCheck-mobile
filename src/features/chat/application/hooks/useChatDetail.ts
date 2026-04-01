@@ -9,6 +9,8 @@ interface InitialStatus {
   isOnline: boolean;
   lastActive: string | null;
   otherUserId?: string;
+  blockedByMe?: boolean;
+  isBlockedByOther?: boolean;
 }
 
 export const useChatDetail = (conversationId: string, initialStatus?: InitialStatus) => {
@@ -20,7 +22,8 @@ export const useChatDetail = (conversationId: string, initialStatus?: InitialSta
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isPeerTyping, setIsPeerTyping] = useState(false);
   const [canLoadMore, setCanLoadMore] = useState(false); // Guard for initial scroll jump
-  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockedByMe, setBlockedByMe] = useState(initialStatus?.blockedByMe ?? false);
+  const [isBlockedByOther, setIsBlockedByOther] = useState(initialStatus?.isBlockedByOther ?? false);
   
   // Refs for stable variables and state tracking
   const currentUserIdRef = useRef<string | null>(null);
@@ -206,12 +209,26 @@ export const useChatDetail = (conversationId: string, initialStatus?: InitialSta
         }
       };
 
+      const handleUserBlocked = (payload: { targetUserId: string; isBlocked: boolean; blockedByMe: boolean }) => {
+        const targetUserId = otherUserIdRef.current?.toString();
+        if (payload.targetUserId.toString() === targetUserId) {
+          if (payload.blockedByMe) {
+            // I am the one who blocked/unblocked
+            setBlockedByMe(payload.isBlocked);
+          } else {
+            // The other person blocked/unblocked me
+            setIsBlockedByOther(payload.isBlocked);
+          }
+        }
+      };
+
       chatSocketService.onNewMessage(handleNewMessage);
       chatSocketService.onReactionUpdate(handleReactionUpdate);
       chatSocketService.onMessageRecalled(handleMessageRecalled);
       chatSocketService.onUserStatusUpdate(handleStatusUpdate);
       chatSocketService.onTyping(handleTyping);
       chatSocketService.onStopTyping(handleStopTyping);
+      chatSocketService.onUserBlocked(handleUserBlocked);
 
       return () => {
         chatSocketService.leaveRoom(conversationId);
@@ -221,6 +238,7 @@ export const useChatDetail = (conversationId: string, initialStatus?: InitialSta
         chatSocketService.offUserStatusUpdate(handleStatusUpdate);
         chatSocketService.offTyping();
         chatSocketService.offStopTyping();
+        chatSocketService.offUserBlocked(handleUserBlocked);
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       };
     }
@@ -316,12 +334,16 @@ export const useChatDetail = (conversationId: string, initialStatus?: InitialSta
     }
   };
 
-  const blockUser = async () => {
+  const toggleBlockStatus = async () => {
     if (!otherUserIdRef.current) return;
     try {
-      await chatRepository.blockUser(otherUserIdRef.current);
+      if (blockedByMe) {
+        await chatRepository.unblockUser(otherUserIdRef.current);
+      } else {
+        await chatRepository.blockUser(otherUserIdRef.current);
+      }
     } catch (err) {
-      console.error('Block user error:', err);
+      console.error('Toggle block status error:', err);
       throw err;
     }
   };
@@ -346,11 +368,13 @@ export const useChatDetail = (conversationId: string, initialStatus?: InitialSta
     deleteMessage,
     clearHistory,
     blockUser: async () => {
-      await blockUser();
-      setIsBlocked(true);
+      const targetState = !blockedByMe;
+      await toggleBlockStatus();
+      setBlockedByMe(targetState);
     },
     getMedia,
-    isBlocked,
+    blockedByMe,
+    isBlockedByOther,
     replyingTo,
     setReplyingTo,
     otherUserStatus,

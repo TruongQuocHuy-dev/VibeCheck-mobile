@@ -19,7 +19,8 @@ export const ENDPOINTS = {
     ADD_PHOTO: '/users/photos',
     DELETE_PHOTO: '/users/photos',
     PUBLIC_PROFILE: (id: string) => `/users/${id}/profile`,
-    BLOCK_USER: (id: string) => `/users/${id}/block`,
+    BLOCK: '/users/block',
+    UNBLOCK: '/users/unblock',
   },
   VIBES: {
     GET_ALL: '/vibes',
@@ -39,6 +40,8 @@ export const ENDPOINTS = {
     MEDIA: (id: string) => `/conversations/${id}/media`,
     CLEAR_HISTORY: (id: string) => `/conversations/${id}/messages`,
     READ: (id: string) => `/conversations/${id}/read`,
+    PIN: (id: string) => `/conversations/${id}/pin`,
+    UNREAD: (id: string) => `/conversations/${id}/unread`,
   },
   MESSAGES: {
     ACTION: (id: string) => `/messages/${id}`,
