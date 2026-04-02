@@ -46,6 +46,7 @@ export const ENDPOINTS = {
   MESSAGES: {
     ACTION: (id: string) => `/messages/${id}`,
     REACTION: (id: string) => `/conversations/messages/${id}/reaction`,
+    UPLOAD: '/media/upload',
   },
   POSTS: {
     FEED: '/posts',                        // GET: paginated feed

@@ -4,6 +4,7 @@ import { chatRepository } from '../../data/ChatRepository';
 import { chatSocketService } from '../../data/ChatSocketService';
 import { getUser } from '../../../../infrastructure/storage/AsyncStorage';
 import { useUnreadCount } from '../../../../shared/providers/UnreadProvider';
+import { useToast } from '../../../../shared/hooks/useToast';
 
 interface InitialStatus {
   isOnline: boolean;
@@ -14,6 +15,7 @@ interface InitialStatus {
 }
 
 export const useChatDetail = (conversationId: string, initialStatus?: InitialStatus) => {
+  const { showToast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -35,6 +37,13 @@ export const useChatDetail = (conversationId: string, initialStatus?: InitialSta
     isOnline: initialStatus?.isOnline ?? false,
     lastActive: initialStatus?.lastActive ?? null,
   });
+
+  const otherUserLastReadId = (() => {
+    if (!otherUserIdRef.current) return null;
+    const otherId = otherUserIdRef.current.toString();
+    // Messages are sorted newest first. The first one read by other person is their latest "seen" point.
+    return messages.find(m => m.isMe && m.readBy?.includes(otherId))?._id;
+  })();
   
   const { refreshUnread, setActiveConversationId } = useUnreadCount();
 
@@ -244,33 +253,87 @@ export const useChatDetail = (conversationId: string, initialStatus?: InitialSta
     }
   }, [conversationId]); 
 
-  const sendMessage = async (content: string, type: Message['type'] = 'text') => {
-    if (!content.trim() || !conversationId) return;
+  const sendMessage = async (
+    content: string, 
+    type: Message['type'] = 'text',
+    media?: { uri: string; type: string; name: string } | Array<{ uri: string; type: string; name: string }>
+  ) => {
+    if (!conversationId) return;
+    if (!content.trim() && !media) return;
+    
     chatSocketService.emitStopTyping(conversationId);
+    
     const tempId = `temp-${Date.now()}`;
     const tempMessage: Message = {
       _id: tempId,
       conversationId,
       sender: { _id: currentUserIdRef.current || 'me', displayName: 'You', fullName: 'You', avatar: null },
-      content,
+      content: content || (type === 'image' ? 'Sent an image' : type === 'audio' ? 'Sent a voice message' : ''),
       type,
       replyTo: replyingTo || undefined,
       createdAt: new Date().toISOString(),
       readBy: [],
       isMe: true,
       status: 'sending',
+      mediaUrl: Array.isArray(media) ? media[0]?.uri : media?.uri, // Show first local URI immediately
+      mediaList: Array.isArray(media) ? media.map(m => ({ url: m.uri, publicId: 'temp', mediaType: type as any })) : [],
+      mediaType: type as any,
     };
+
     setMessages(prev => [tempMessage, ...prev]);
     setReplyingTo(null);
+
     try {
-      const realMessage = await chatRepository.sendMessage(conversationId, content, type, replyingTo?._id);
+      let finalMediaUrl = '';
+      let finalPublicId = '';
+      let finalMediaList: Array<{ url: string; publicId: string; mediaType: 'image' | 'audio' | 'video' }> = [];
+      let finalContent = content;
+
+      if (media) {
+        if (Array.isArray(media)) {
+          // Parallel upload
+          const results = await Promise.all(media.map(m => chatRepository.uploadMedia(m.uri, m.name, m.type)));
+          finalMediaList = results.map(r => ({ url: r.url, publicId: r.publicId, mediaType: r.type }));
+          finalMediaUrl = finalMediaList[0]?.url;
+          finalPublicId = finalMediaList[0]?.publicId;
+        } else {
+          // Single upload
+          const uploadResult = await chatRepository.uploadMedia(media.uri, media.name, media.type);
+          finalMediaUrl = uploadResult.url;
+          finalPublicId = uploadResult.publicId;
+          finalMediaList = [{ url: uploadResult.url, publicId: uploadResult.publicId, mediaType: uploadResult.type }];
+        }
+
+        // If it's just a media message without text, use a professional placeholder
+        if (!finalContent) {
+          if (type === 'image') finalContent = media && Array.isArray(media) && media.length > 1 ? `[${media.length} hình ảnh]` : '[Hình ảnh]';
+          else if (type === 'audio') finalContent = '[Tin nhắn thoại]';
+          else finalContent = '[Tệp đính kèm]';
+        }
+      }
+
+      // 2. Save Message to DB
+      const realMessage = await chatRepository.sendMessage(
+        conversationId, 
+        finalContent, 
+        type, 
+        replyingTo?._id,
+        finalMediaList.length > 0 ? { 
+          uri: finalMediaUrl, 
+          type: type as any, 
+          publicId: finalPublicId,
+          mediaList: finalMediaList 
+        } : undefined as any
+      );
+
+      // 3. Update UI
       setMessages(prev => prev.map(m => m._id === tempId ? { ...realMessage, isMe: true, status: 'sent' } : m));
     } catch (err) {
       console.error('Send message error:', err);
+      // Update UI with error state for retry
       setMessages(prev => prev.map(m => m._id === tempId ? { ...m, status: 'error' } : m));
     }
   };
-
   const toggleReaction = async (messageId: string, emoji: string) => {
     const userId = currentUserIdRef.current;
     if (!userId) return;
@@ -302,8 +365,18 @@ export const useChatDetail = (conversationId: string, initialStatus?: InitialSta
   const deleteMessage = async (messageId: string, type: 'me' | 'all') => {
     const previousMessages = [...messages];
     const userId = currentUserIdRef.current;
+    
+    // 1. Pre-validation: Don't show optimistic UI if we already know it fails
+    if (type === 'all') {
+      const msg = messages.find(m => m._id === messageId);
+      const twoHours = 2 * 60 * 60 * 1000;
+      if (msg && (Date.now() - new Date(msg.createdAt).getTime() > twoHours)) {
+        showToast('Không thể thu hồi tin nhắn sau 2 giờ', 'error');
+        return;
+      }
+    }
 
-    // Optimistic UI
+    // 2. Optimistic UI
     if (type === 'all') {
       setMessages(prev => prev.map(m => 
         m._id === messageId ? { ...m, isRecalled: { status: true, by: userId || 'me', at: new Date().toISOString() } } : m
@@ -314,11 +387,14 @@ export const useChatDetail = (conversationId: string, initialStatus?: InitialSta
 
     try {
       await chatRepository.deleteMessage(messageId, type);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Delete message error:', err);
-      // Rollback
+      // Rollback UI
       setMessages(previousMessages);
-      throw err; // Let caller handle UI notification
+      
+      // Toast notification for user
+      const message = err.message || 'Không thể thực hiện tác vụ này';
+      showToast(message, 'error');
     }
   };
 
@@ -383,5 +459,6 @@ export const useChatDetail = (conversationId: string, initialStatus?: InitialSta
     isPeerTyping,
     sendTypingStatus,
     markRead,
+    otherUserLastReadId,
   };
 };

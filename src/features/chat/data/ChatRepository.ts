@@ -12,6 +12,7 @@ import {
   unblockUserApi,
   pinConversationApi,
   markAsUnreadApi,
+  uploadMediaApi,
 } from '../../../infrastructure/services/chat.service';
 
 export class ChatRepository implements IChatRepository {
@@ -22,11 +23,24 @@ export class ChatRepository implements IChatRepository {
   async sendMessage(
     conversationId: string,
     content: string,
-    type: 'text' | 'image' | 'video' | 'story_reply',
+    type: 'text' | 'image' | 'video' | 'audio' | 'story_reply',
     replyToId?: string,
-    media?: { uri: string; type: 'image' | 'video' }
+    media?: { 
+      uri: string; 
+      type: 'image' | 'video' | 'audio'; 
+      publicId?: string;
+      mediaList?: Array<{ url: string; publicId: string; mediaType: 'image' | 'video' | 'audio' }>;
+    }
   ): Promise<Message> {
     return await sendMessageApi(conversationId, content, type, replyToId, media);
+  }
+
+  async uploadMedia(
+    uri: string,
+    name: string,
+    type: string
+  ): Promise<{ url: string; publicId: string; type: 'image' | 'audio' | 'video' }> {
+    return await uploadMediaApi(uri, name, type);
   }
 
   async toggleReaction(messageId: string, emoji: string): Promise<Message> {

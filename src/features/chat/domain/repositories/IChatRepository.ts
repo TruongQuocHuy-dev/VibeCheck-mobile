@@ -20,10 +20,19 @@ export interface IChatRepository {
   sendMessage(
     conversationId: string, 
     content: string, 
-    type: 'text' | 'image' | 'video' | 'story_reply',
+    type: 'text' | 'image' | 'video' | 'audio' | 'story_reply',
     replyToId?: string,
-    media?: { uri: string; type: 'image' | 'video' }
+    media?: { uri: string; type: 'image' | 'video' | 'audio' }
   ): Promise<Message>;
+
+  /**
+   * Upload media file.
+   */
+  uploadMedia(
+    uri: string,
+    name: string,
+    type: string
+  ): Promise<{ url: string; publicId: string; type: 'image' | 'audio' | 'video' }>;
 
   /**
    * Toggle a reaction on a message.

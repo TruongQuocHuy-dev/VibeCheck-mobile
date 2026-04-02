@@ -54,7 +54,7 @@ export interface Message {
   conversationId: string;
   sender: ChatUser;
   content: string;
-  type: 'text' | 'image' | 'video' | 'story_reply';
+  type: 'text' | 'image' | 'video' | 'audio' | 'story_reply';
   storyReference?: {
     storyId?: string;
     imageUrl?: string;
@@ -63,7 +63,13 @@ export interface Message {
   replyTo?: Message;
   reactions?: Reaction[];
   mediaUrl?: string;
-  mediaType?: 'image' | 'video';
+  publicId?: string;
+  mediaType?: 'image' | 'video' | 'audio';
+  mediaList?: Array<{
+    url: string;
+    publicId: string;
+    mediaType: 'image' | 'video' | 'audio';
+  }>;
   readBy: string[];
   deletedBy?: string[];
   isRecalled?: {

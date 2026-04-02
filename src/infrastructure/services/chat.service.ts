@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import apiClient from '../api/axios';
 import { ENDPOINTS } from '../api/endpoints';
 import { Message, ConversationItem } from '../../features/chat/domain/types/chat.types';
@@ -30,9 +31,14 @@ export const fetchConversations = async (): Promise<ConversationItem[]> => {
 export const sendMessageApi = async (
   conversationId: string,
   content: string,
-  type: 'text' | 'image' | 'video' | 'story_reply' = 'text',
+  type: 'text' | 'image' | 'video' | 'audio' | 'story_reply' = 'text',
   parentMessageId?: string,
-  media?: { uri: string; type: 'image' | 'video' }
+  media?: { 
+    uri: string; 
+    type: 'image' | 'video' | 'audio'; 
+    publicId?: string;
+    mediaList?: Array<{ url: string; publicId: string; mediaType: 'image' | 'video' | 'audio' }>;
+  }
 ): Promise<Message> => {
   const url = ENDPOINTS.CONVERSATIONS.MESSAGES(conversationId);
   const payload = { content, type, parentMessageId, media };
@@ -121,4 +127,32 @@ export const pinConversationApi = async (conversationId: string): Promise<void> 
 export const markAsUnreadApi = async (conversationId: string): Promise<void> => {
   const url = ENDPOINTS.CONVERSATIONS.UNREAD(conversationId);
   await apiClient.patch(url);
+};
+
+/**
+ * Upload media file (photo or audio).
+ */
+export const uploadMediaApi = async (
+  uri: string,
+  name: string,
+  type: string
+): Promise<{ url: string; publicId: string; type: 'image' | 'audio' | 'video' }> => {
+  const url = ENDPOINTS.MESSAGES.UPLOAD;
+  const formData = new FormData();
+  
+  formData.append('file', {
+    uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''),
+    name: name || 'upload.jpg',
+    type: type || 'image/jpeg',
+  } as any);
+
+  const data = await apiClient.post<any, any>(url, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  
+  // Backends returns { status: 'success', data: { url, publicId, type } }
+  // Axios interceptor usually unfolds the 'data' property.
+  return data;
 };

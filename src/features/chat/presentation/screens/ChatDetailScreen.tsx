@@ -12,13 +12,20 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
   Animated,
+  Modal,
+  Pressable,
+  Dimensions,
 } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { colors } from '../../../../core/theme/colors';
 import { spacing, borderRadius as br } from '../../../../core/theme/spacing';
+import { useToast } from '../../../../shared/hooks/useToast';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 import { useChatDetail } from '../../application/hooks/useChatDetail';
 import { MessageBubble } from '../components/MessageBubble';
 import { ChatInput } from '../components/ChatInput';
@@ -30,6 +37,7 @@ export const ChatDetailScreen: React.FC = () => {
   const route = useRoute<any>();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { showToast } = useToast();
   const { conversationId, name, avatar, isOnline, otherUserId, lastActive, blockedByMe: initialBlockedByMe, isBlockedByOther: initialIsBlockedByOther } = route.params || {};
 
   const {
@@ -51,6 +59,7 @@ export const ChatDetailScreen: React.FC = () => {
     blockedByMe,
     isBlockedByOther,
     blockUser,
+    otherUserLastReadId,
   } = useChatDetail(conversationId, { 
     isOnline, 
     otherUserId, 
@@ -68,6 +77,7 @@ export const ChatDetailScreen: React.FC = () => {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [reactionModalVisible, setReactionModalVisible] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const [previewMedia, setPreviewMedia] = useState<{ index: number; list: any[] } | null>(null);
 
   // Force Scroll to Bottom on Initial Load
   useEffect(() => {
@@ -113,6 +123,9 @@ export const ChatDetailScreen: React.FC = () => {
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
     setShowScrollToBottom(false);
   };
+  const handleImagePress = (index: number, list: any[]) => {
+    setPreviewMedia({ index, list });
+  };
 
   const handleLongPress = (message: Message) => {
     setSelectedMessage(message);
@@ -132,6 +145,15 @@ export const ChatDetailScreen: React.FC = () => {
     
     try {
       if (action === 'reply') setReplyingTo(selectedMessage);
+      if (action === 'copy') {
+        if (selectedMessage.content && selectedMessage.type === 'text') {
+           Clipboard.setString(selectedMessage.content);
+           showToast('Đã sao chép tin nhắn', 'success');
+        } else if (selectedMessage.mediaUrl) {
+           Clipboard.setString(selectedMessage.mediaUrl);
+           showToast('Đã sao chép liên kết hình ảnh', 'success');
+        }
+      }
       if (action === 'delete') {
         await deleteMessage(selectedMessage._id, 'me');
       }
@@ -197,7 +219,14 @@ export const ChatDetailScreen: React.FC = () => {
           onLongPress={handleLongPress}
           onDoubleTap={(msg) => toggleReaction(msg._id, '❤️')}
           onReplyPress={(msg) => setReplyingTo(msg)}
+          onImagePress={handleImagePress}
+          isReadByOther={!!item._id && !!otherUserLastReadId && item._id <= otherUserLastReadId}
         />
+        {item._id === otherUserLastReadId && (
+          <View style={styles.readStatusContainer}>
+             <Image source={{ uri: avatar }} style={styles.readAvatar} />
+          </View>
+        )}
       </View>
     );
   };
@@ -311,7 +340,7 @@ export const ChatDetailScreen: React.FC = () => {
           </View>
         ) : (
           <ChatInput
-            onSend={(content) => sendMessage(content)}
+            onSend={(content, type, media) => sendMessage(content, type, media)}
             onTyping={(status) => sendTypingStatus(status)}
             replyingTo={replyingTo}
             onCancelReply={() => setReplyingTo(null)}
@@ -328,6 +357,45 @@ export const ChatDetailScreen: React.FC = () => {
         isMyMessage={selectedMessage?.isMe}
         isRecalled={selectedMessage?.isRecalled?.status}
       />
+
+      {/* Image Preview Modal */}
+      <Modal visible={!!previewMedia} transparent animationType="fade">
+        <View style={styles.previewContainer}>
+          <Pressable style={styles.previewOverlay} onPress={() => setPreviewMedia(null)} />
+          <View style={styles.previewContent}>
+            {previewMedia && (
+              <FlatList
+                data={previewMedia.list}
+                horizontal
+                pagingEnabled
+                initialScrollIndex={previewMedia.index}
+                getItemLayout={(_, index) => ({
+                  length: SCREEN_WIDTH,
+                  offset: SCREEN_WIDTH * index,
+                  index,
+                })}
+                keyExtractor={(_, i) => i.toString()}
+                showsHorizontalScrollIndicator={false}
+                renderItem={({ item }) => (
+                  <View style={styles.slide}>
+                    <Image 
+                      source={{ uri: item.url || item.uri || item }} 
+                      style={styles.previewImage} 
+                      resizeMode="contain" 
+                    />
+                  </View>
+                )}
+              />
+            )}
+            <TouchableOpacity 
+              style={[styles.closePreview, { top: insets.top + spacing.md }]} 
+              onPress={() => setPreviewMedia(null)}
+            >
+              <Icon name="close" size={30} color={colors.white} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -390,5 +458,48 @@ const styles = StyleSheet.create({
     color: colors.white, 
     fontSize: 14, 
     fontFamily: 'Outfit-SemiBold' 
+  },
+  readStatusContainer: {
+    alignItems: 'flex-end',
+    paddingRight: spacing.sm,
+    marginTop: -spacing.xs,
+    marginBottom: spacing.md_sm,
+  },
+  readAvatar: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.8,
+    borderColor: colors.bgDark,
+  },
+  previewContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  previewContent: {
+    flex: 1,
+  },
+  slide: {
+    width: SCREEN_WIDTH,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  closePreview: {
+    position: 'absolute',
+    right: spacing.lg,
+    zIndex: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 20,
+    padding: 4,
   },
 });
