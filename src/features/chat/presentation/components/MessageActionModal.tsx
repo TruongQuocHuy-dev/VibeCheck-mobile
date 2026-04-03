@@ -17,9 +17,10 @@ interface MessageActionModalProps {
   visible: boolean;
   onClose: () => void;
   onSelectEmoji: (emoji: string) => void;
-  onActionPress: (action: 'reply' | 'copy' | 'report' | 'delete' | 'recall') => void;
+  onActionPress: (action: 'reply' | 'copy' | 'report' | 'delete' | 'recall' | 'save') => void;
   isMyMessage?: boolean;
   isRecalled?: boolean;
+  messageType?: 'text' | 'image' | 'video' | 'audio' | 'story_reply';
 }
 
 export const MessageActionModal: React.FC<MessageActionModalProps> = ({
@@ -29,6 +30,7 @@ export const MessageActionModal: React.FC<MessageActionModalProps> = ({
   onActionPress,
   isMyMessage,
   isRecalled,
+  messageType,
 }) => {
   return (
     <Modal
@@ -80,16 +82,18 @@ export const MessageActionModal: React.FC<MessageActionModalProps> = ({
                       <Icon name="arrow-undo-outline" size={20} color={colors.textPrimary} />
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                      style={styles.actionItem}
-                      onPress={() => {
-                        onClose();
-                        onActionPress('copy');
-                      }}
-                    >
-                      <Text style={styles.actionText}>Sao chép</Text>
-                      <Icon name="copy-outline" size={20} color={colors.textPrimary} />
-                    </TouchableOpacity>
+                    {(messageType === 'text' || messageType === 'story_reply') && (
+                      <TouchableOpacity
+                        style={styles.actionItem}
+                        onPress={() => {
+                          onClose();
+                          onActionPress('copy');
+                        }}
+                      >
+                        <Text style={styles.actionText}>Sao chép</Text>
+                        <Icon name="copy-outline" size={20} color={colors.textPrimary} />
+                      </TouchableOpacity>
+                    )}
 
                     {isMyMessage && (
                       <TouchableOpacity
@@ -101,6 +105,18 @@ export const MessageActionModal: React.FC<MessageActionModalProps> = ({
                       >
                         <Text style={styles.actionText}>Thu hồi</Text>
                         <Icon name="refresh-outline" size={20} color={colors.textPrimary} />
+                      </TouchableOpacity>
+                    )}
+                    {messageType === 'image' && (
+                      <TouchableOpacity
+                        style={styles.actionItem}
+                        onPress={() => {
+                          onClose();
+                          onActionPress('save');
+                        }}
+                      >
+                        <Text style={styles.actionText}>Lưu ảnh</Text>
+                        <Icon name="download-outline" size={20} color={colors.textPrimary} />
                       </TouchableOpacity>
                     )}
                   </>

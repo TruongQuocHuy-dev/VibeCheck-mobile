@@ -136,7 +136,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       return (
         <Pressable 
           style={styles.imageWrapper} 
-          onPress={() => (mediaUrl || content) && onImagePress?.(0, [{ url: mediaUrl || content }])}
+          onPress={() => handlePress(() => (mediaUrl || content) && onImagePress?.(0, [{ url: mediaUrl || content }]))}
           onLongPress={() => onLongPress(message)}
         >
           <Image
@@ -163,7 +163,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         )}
         <Pressable 
           style={styles.stackContainer} 
-          onPress={() => onImagePress?.(0, mediaList)}
+          onPress={() => handlePress(() => onImagePress?.(0, mediaList))}
           onLongPress={() => onLongPress(message)}
         >
           {visiblePhotos.map((item, idx) => {
@@ -196,11 +196,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
 
   const lastTap = useRef(0);
-  const handlePress = () => {
+  const handlePress = (singleTapHandler?: () => void) => {
     if (message.isRecalled?.status) return;
     const now = Date.now();
     if (now - lastTap.current < 300) {
       onDoubleTap(message);
+    } else {
+      if (singleTapHandler) singleTapHandler();
     }
     lastTap.current = now;
   };
@@ -260,7 +262,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         <View style={[styles.bubbleArea, hasReactions && styles.bubbleAreaWithReactions]}>
           <Pressable
             onLongPress={() => onLongPress(message)}
-            onPress={handlePress}
+            onPress={() => handlePress()}
             style={[
               styles.bubble,
               isMe ? styles.bubbleMe : styles.bubblePartner,
@@ -313,18 +315,21 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               )}
             </Pressable>
 
-          {isMe && !isNextSameSender && (
+          {isMe && !isPrevSameSender && (
             <View style={styles.statusIconContainer}>
               {status === 'sending' ? (
-                <Icon name="checkmark-circle-outline" size={16} color={colors.textSecondary} />
-              ) : (!isReadByOther || status === 'sent') ? (
-                 /* If not read, or explicitly sent, show the blue checkmark */
-                 !isReadByOther ? (
-                   <Icon name="checkmark-circle" size={16} color={colors.messengerBlue} />
-                 ) : null
+                <Icon name="ellipse-outline" size={14} color={colors.messengerBlue} />
               ) : status === 'error' ? (
-                <Icon name="alert-circle" size={18} color={colors.error} />
-              ) : null}
+                <Icon name="alert-circle" size={16} color={colors.error} />
+              ) : (
+                !(message.readBy?.some(id => id !== message.sender._id)) ? (
+                  <Icon 
+                    name={message.deliveredBy?.some(id => id !== message.sender._id) ? "checkmark-circle" : "checkmark-circle-outline"} 
+                    size={14} 
+                    color={colors.messengerBlue} 
+                  />
+                ) : null
+              )}
             </View>
           )}
 

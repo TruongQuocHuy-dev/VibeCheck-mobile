@@ -69,6 +69,14 @@ export const markAsReadApi = async (conversationId: string): Promise<void> => {
 };
 
 /**
+ * Mark a message as delivered.
+ */
+export const markAsDeliveredApi = async (messageId: string): Promise<void> => {
+  const url = ENDPOINTS.MESSAGES.DELIVERED(messageId);
+  await apiClient.post(url);
+};
+
+/**
  * Delete or recall a message.
  */
 export const deleteMessageApi = async (messageId: string, type: 'me' | 'all'): Promise<void> => {

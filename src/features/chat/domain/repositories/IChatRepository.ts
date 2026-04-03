@@ -48,6 +48,11 @@ export interface IChatRepository {
   markAsRead(conversationId: string): Promise<void>;
 
   /**
+   * Mark a single message as delivered.
+   */
+  markAsDelivered(messageId: string): Promise<void>;
+
+  /**
    * Delete or recall a message.
    * @param messageId 
    * @param type 'me' (delete locally) or 'all' (recall for everyone)

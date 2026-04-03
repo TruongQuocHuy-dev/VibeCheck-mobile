@@ -71,6 +71,7 @@ export interface Message {
     mediaType: 'image' | 'video' | 'audio';
   }>;
   readBy: string[];
+  deliveredBy: string[];
   deletedBy?: string[];
   isRecalled?: {
     status: boolean;

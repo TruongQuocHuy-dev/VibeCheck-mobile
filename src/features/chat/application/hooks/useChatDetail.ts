@@ -176,11 +176,20 @@ export const useChatDetail = (conversationId: string, initialStatus?: InitialSta
                 return updated;
               }
             }
-            if (!isMe) markRead();
-            return [{ ...payload.message, isMe, status: 'sent' }, ...prev];
+            if (!isMe) {
+              markRead();
+              chatRepository.markAsDelivered(payload.message._id).catch(() => {});
+            }
+            return [{ ...payload.message, isMe, status: 'sent', deliveredBy: payload.message.deliveredBy || [] }, ...prev];
           });
           setIsPeerTyping(false);
         }
+      };
+
+      const handleMessageDelivered = (payload: { messageId: string; userId: string }) => {
+        setMessages(prev => prev.map(m => 
+          m._id === payload.messageId ? { ...m, deliveredBy: [...(m.deliveredBy || []), payload.userId] } : m
+        ));
       };
 
       const handleReactionUpdate = (payload: { messageId: string; reactions: Reaction[] }) => {
@@ -232,6 +241,7 @@ export const useChatDetail = (conversationId: string, initialStatus?: InitialSta
       };
 
       chatSocketService.onNewMessage(handleNewMessage);
+      chatSocketService.onMessageDelivered(handleMessageDelivered);
       chatSocketService.onReactionUpdate(handleReactionUpdate);
       chatSocketService.onMessageRecalled(handleMessageRecalled);
       chatSocketService.onUserStatusUpdate(handleStatusUpdate);
@@ -242,6 +252,7 @@ export const useChatDetail = (conversationId: string, initialStatus?: InitialSta
       return () => {
         chatSocketService.leaveRoom(conversationId);
         chatSocketService.offNewMessage(handleNewMessage);
+        chatSocketService.offMessageDelivered(handleMessageDelivered);
         chatSocketService.offReactionUpdate(handleReactionUpdate);
         chatSocketService.offMessageRecalled(handleMessageRecalled);
         chatSocketService.offUserStatusUpdate(handleStatusUpdate);
@@ -273,6 +284,7 @@ export const useChatDetail = (conversationId: string, initialStatus?: InitialSta
       replyTo: replyingTo || undefined,
       createdAt: new Date().toISOString(),
       readBy: [],
+      deliveredBy: [],
       isMe: true,
       status: 'sending',
       mediaUrl: Array.isArray(media) ? media[0]?.uri : media?.uri, // Show first local URI immediately

@@ -140,18 +140,16 @@ export const ChatDetailScreen: React.FC = () => {
     }
   };
 
-  const handleActionPress = async (action: 'reply' | 'copy' | 'report' | 'delete' | 'recall') => {
+  const handleActionPress = async (action: 'reply' | 'copy' | 'report' | 'delete' | 'recall' | 'save') => {
     if (!selectedMessage) return;
     
     try {
       if (action === 'reply') setReplyingTo(selectedMessage);
       if (action === 'copy') {
-        if (selectedMessage.content && selectedMessage.type === 'text') {
+        const canCopy = selectedMessage.type === 'text' || selectedMessage.type === 'story_reply';
+        if (canCopy && selectedMessage.content) {
            Clipboard.setString(selectedMessage.content);
            showToast('Đã sao chép tin nhắn', 'success');
-        } else if (selectedMessage.mediaUrl) {
-           Clipboard.setString(selectedMessage.mediaUrl);
-           showToast('Đã sao chép liên kết hình ảnh', 'success');
         }
       }
       if (action === 'delete') {
@@ -159,6 +157,43 @@ export const ChatDetailScreen: React.FC = () => {
       }
       if (action === 'recall') {
         await deleteMessage(selectedMessage._id, 'all');
+      }
+      if (action === 'save' && selectedMessage.mediaUrl) {
+        showToast('Đang tải ảnh...', 'info');
+        try {
+          const { PermissionsAndroid, Platform } = await import('react-native');
+          
+          // 1. Permission check (Android)
+          if (Platform.OS === 'android') {
+            const version = parseInt(Platform.Version.toString(), 10);
+            if (version >= 33) {
+              const res = await PermissionsAndroid.request('android.permission.READ_MEDIA_IMAGES');
+              if (res !== 'granted') throw new Error('Cần quyền truy cập thư viện');
+            } else {
+              const res = await PermissionsAndroid.request('android.permission.WRITE_EXTERNAL_STORAGE');
+              if (res !== 'granted') throw new Error('Cần quyền lưu trữ');
+            }
+          }
+
+          // 2. Download to Temp
+          const { default: ReactNativeBlobUtil } = await import('react-native-blob-util');
+          const res = await ReactNativeBlobUtil.config({
+            fileCache: true,
+            appendExt: 'jpg',
+          }).fetch('GET', selectedMessage.mediaUrl);
+
+          // 3. Save to Gallery
+          const { CameraRoll } = await import('@react-native-camera-roll/camera-roll');
+          const path = res.path();
+          await CameraRoll.saveAsset(`file://${path}`, { type: 'photo' });
+          
+          // 4. Cleanup & Notify
+          await ReactNativeBlobUtil.fs.unlink(path);
+          showToast('Đã lưu ảnh vào thư viện', 'success');
+        } catch (saveErr: any) {
+          console.error('Save error:', saveErr);
+          showToast(saveErr.message || 'Không thể lưu ảnh', 'error');
+        }
       }
     } catch (err) {
       // Error handled in hook (rollback + console)
@@ -220,9 +255,9 @@ export const ChatDetailScreen: React.FC = () => {
           onDoubleTap={(msg) => toggleReaction(msg._id, '❤️')}
           onReplyPress={(msg) => setReplyingTo(msg)}
           onImagePress={handleImagePress}
-          isReadByOther={!!item._id && !!otherUserLastReadId && item._id <= otherUserLastReadId}
+          isReadByOther={!!item._id && !!otherUserLastReadId && item._id.toString() <= otherUserLastReadId.toString()}
         />
-        {item._id === otherUserLastReadId && (
+        {item._id.toString() === otherUserLastReadId?.toString() && (
           <View style={styles.readStatusContainer}>
              <Image source={{ uri: avatar }} style={styles.readAvatar} />
           </View>
@@ -356,6 +391,7 @@ export const ChatDetailScreen: React.FC = () => {
         onActionPress={handleActionPress}
         isMyMessage={selectedMessage?.isMe}
         isRecalled={selectedMessage?.isRecalled?.status}
+        messageType={selectedMessage?.type}
       />
 
       {/* Image Preview Modal */}

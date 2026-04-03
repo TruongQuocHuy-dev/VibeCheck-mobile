@@ -11,10 +11,19 @@ export type MessageCallback = (payload: { conversationId: string; message: Messa
 export type ReactionCallback = (payload: { messageId: string; reactions: any[] }) => void;
 export type StatusCallback = (payload: { userId: string; isOnline: boolean; lastActive: string }) => void;
 export type RecallCallback = (payload: { messageId: string; conversationId: string }) => void;
+export type DeliveredCallback = (payload: { messageId: string; conversationId: string; userId: string }) => void;
 
 class ChatSocketService {
   onNewMessage(callback: MessageCallback) {
     onSocketEvent('new_message', callback);
+  }
+
+  onMessageDelivered(callback: DeliveredCallback) {
+    onSocketEvent('message_delivered', callback);
+  }
+
+  offMessageDelivered(callback: DeliveredCallback) {
+    offSocketEvent('message_delivered', callback);
   }
 
   offNewMessage(callback: MessageCallback) {

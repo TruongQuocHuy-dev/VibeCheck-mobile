@@ -46,6 +46,7 @@ export const ENDPOINTS = {
   MESSAGES: {
     ACTION: (id: string) => `/messages/${id}`,
     REACTION: (id: string) => `/conversations/messages/${id}/reaction`,
+    DELIVERED: (id: string) => `/conversations/messages/${id}/delivered`,
     UPLOAD: '/media/upload',
   },
   POSTS: {

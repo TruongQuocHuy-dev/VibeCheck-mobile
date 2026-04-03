@@ -13,18 +13,24 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import AudioRecorderPlayer from 'react-native-audio-recorder-player';
+import { PermissionsAndroid, Platform, Modal } from 'react-native';
 import { colors } from '../../../../core/theme/colors';
 import { spacing, borderRadius } from '../../../../core/theme/spacing';
 import { useChatDetail } from '../../application/hooks/useChatDetail';
 import { Message } from '../../domain/types/chat.types';
+import { useToast } from '../../../../shared/hooks/useToast';
 
-const { width } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const COLUMN_COUNT = 3;
-const IMAGE_SIZE = (width - spacing.md * 2 - spacing.xs * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
+const IMAGE_SIZE = (SCREEN_WIDTH - spacing.md * 2 - spacing.xs * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
+
+const audioPlayerInstance = new AudioRecorderPlayer();
 
 export const ChatInfoScreen: React.FC = () => {
   const route = useRoute<any>();
   const navigation = useNavigation();
+  const { showToast } = useToast();
   const { conversationId, userId, name, avatar, bio, blockedByMe: initialBlockedByMe } = route.params || {};
 
   const {
@@ -48,26 +54,58 @@ export const ChatInfoScreen: React.FC = () => {
     });
   };
 
+  const [activeTab, setActiveTab] = useState<'media' | 'voice'>('media');
   const [media, setMedia] = useState<Message[]>([]);
   const [loadingMedia, setLoadingMedia] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [mediaPage, setMediaPage] = useState(1);
   const [hasMoreMedia, setHasMoreMedia] = useState(true);
 
-  const fetchMediaData = useCallback(async (page: number) => {
-    if (page > 1 && !hasMoreMedia) return;
+  // Preview States
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [previewData, setPreviewData] = useState<Message[]>([]);
+
+  // Audio States
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const [playTime, setPlayTime] = useState('00:00');
+
+  const fetchMediaData = useCallback(async (page: number, currentTab: 'media' | 'voice') => {
+    if (page > 1 && (!hasMoreMedia || loadingMore)) return;
     
     if (page === 1) setLoadingMedia(true);
-    const data = await getMedia(page);
-    
-    if (data.length < 20) setHasMoreMedia(false);
-    
-    setMedia(prev => (page === 1 ? data : [...prev, ...data]));
-    setLoadingMedia(false);
-  }, [getMedia, hasMoreMedia]);
+    else setLoadingMore(true);
+
+    try {
+      const data = await getMedia(page);
+      // Backend returns all mediaTypes. We filter on frontend for simplicity unless we want dedicated endpoints.
+      const filtered = data.filter(m => 
+        currentTab === 'media' ? ['image', 'video'].includes(m.type) : m.type === 'audio'
+      );
+
+      if (data.length < 20) setHasMoreMedia(false);
+      
+      setMedia(prev => {
+        if (page === 1) return filtered;
+        const existingIds = new Set(prev.map(m => m._id));
+        const newItems = filtered.filter(m => !existingIds.has(m._id));
+        return [...prev, ...newItems];
+      });
+      setMediaPage(page);
+    } catch (err) {
+      console.error('Fetch media error:', err);
+    } finally {
+      setLoadingMedia(false);
+      setLoadingMore(false);
+    }
+  }, [getMedia, hasMoreMedia, loadingMore]);
 
   useEffect(() => {
-    fetchMediaData(1);
-  }, []);
+    setMedia([]);
+    setMediaPage(1);
+    setHasMoreMedia(true);
+    fetchMediaData(1, activeTab);
+  }, [activeTab]);
 
   const handleClearChat = () => {
     Alert.alert(
@@ -103,7 +141,7 @@ export const ChatInfoScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await blockUser(); // useChatDetail's blockUser toggles blockedByMe
+              await blockUser();
             } catch (err) {
               Alert.alert('Lỗi', 'Không thể thực hiện tác vụ.');
             }
@@ -113,16 +151,110 @@ export const ChatInfoScreen: React.FC = () => {
     );
   };
 
-  const renderMediaItem = ({ item }: { item: Message }) => (
-    <TouchableOpacity activeOpacity={0.9} style={styles.mediaItem}>
-      <Image source={{ uri: item.mediaUrl }} style={styles.mediaImage} />
-      {item.type === 'video' && (
-        <View style={styles.videoIconOverlay}>
-          <Icon name="play" size={20} color={colors.white} />
+  const handlePreviewMedia = (index: number) => {
+    setPreviewData(media);
+    setSelectedIndex(index);
+    setPreviewVisible(true);
+  };
+
+  const handleSaveToGallery = async (uri: string) => {
+    try {
+      if (Platform.OS === 'android') {
+        if (Platform.Version >= 33) {
+          const res = await PermissionsAndroid.request('android.permission.READ_MEDIA_IMAGES');
+          if (res !== 'granted') throw new Error('Cần quyền truy cập thư viện');
+        } else {
+          const res = await PermissionsAndroid.request('android.permission.WRITE_EXTERNAL_STORAGE');
+          if (res !== 'granted') throw new Error('Cần quyền lưu trữ');
+        }
+      }
+
+      const { default: ReactNativeBlobUtil } = await import('react-native-blob-util');
+      const res = await ReactNativeBlobUtil.config({
+        fileCache: true,
+        appendExt: 'jpg',
+      }).fetch('GET', uri);
+
+      const { CameraRoll } = await import('@react-native-camera-roll/camera-roll');
+      const path = res.path();
+      await CameraRoll.saveAsset(`file://${path}`, { type: 'photo' });
+      await ReactNativeBlobUtil.fs.unlink(path);
+      showToast('Đã lưu ảnh vào thư viện', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Không thể lưu ảnh', 'error');
+    }
+  };
+
+  const handleToggleAudio = async (message: Message) => {
+    if (playingId === message._id) {
+      await audioPlayerInstance.stopPlayer();
+      audioPlayerInstance.removePlayBackListener();
+      setPlayingId(null);
+    } else {
+      try {
+        if (playingId) {
+          await audioPlayerInstance.stopPlayer();
+        }
+        setPlayingId(message._id);
+        await audioPlayerInstance.startPlayer(message.mediaUrl);
+        audioPlayerInstance.addPlayBackListener((e) => {
+          setPlayTime(audioPlayerInstance.mmssss(Math.floor(e.currentPosition)));
+          if (e.currentPosition === e.duration) {
+            setPlayingId(null);
+          }
+        });
+      } catch (err) {
+        setPlayingId(null);
+      }
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      audioPlayerInstance.stopPlayer();
+      audioPlayerInstance.removePlayBackListener();
+    };
+  }, []);
+
+  const renderMediaItem = ({ item, index }: { item: Message; index: number }) => {
+    if (activeTab === 'media') {
+      return (
+        <TouchableOpacity 
+          activeOpacity={0.9} 
+          style={styles.mediaItem}
+          onPress={() => handlePreviewMedia(index)}
+        >
+          <Image source={{ uri: item.mediaUrl }} style={styles.mediaImage} />
+          {item.type === 'video' && (
+            <View style={styles.videoIconOverlay}>
+              <Icon name="play" size={20} color={colors.white} />
+            </View>
+          )}
+        </TouchableOpacity>
+      );
+    }
+
+    // Voice item
+    const isPlaying = playingId === item._id;
+    return (
+      <TouchableOpacity 
+        activeOpacity={0.7} 
+        style={styles.voiceItem}
+        onPress={() => handleToggleAudio(item)}
+      >
+        <View style={[styles.voiceIconBg, isPlaying && { backgroundColor: colors.white }]}>
+          <Icon name={isPlaying ? "pause" : "mic"} size={20} color={isPlaying ? colors.messengerBlue : colors.white} />
         </View>
-      )}
-    </TouchableOpacity>
-  );
+        <View style={styles.voiceInfo}>
+          <Text style={styles.voiceTitle}>{isPlaying ? 'Đang phát...' : 'Tin nhắn thoại'}</Text>
+          <Text style={styles.voiceDate}>
+            {isPlaying ? playTime : `${new Date(item.createdAt).toLocaleDateString()} ${new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+          </Text>
+        </View>
+        <Icon name="chevron-forward" size={16} color={colors.textSecondary} />
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -135,10 +267,11 @@ export const ChatInfoScreen: React.FC = () => {
       </View>
 
       <FlatList
+        key={activeTab} // Force re-render when switching layouts
         data={media}
         keyExtractor={(item) => item._id}
         renderItem={renderMediaItem}
-        numColumns={COLUMN_COUNT}
+        numColumns={activeTab === 'media' ? COLUMN_COUNT : 1}
         ListHeaderComponent={
           <View style={styles.profileSection}>
             <TouchableOpacity onPress={handleViewProfile}>
@@ -170,8 +303,22 @@ export const ChatInfoScreen: React.FC = () => {
             </View>
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Phương tiện & Link</Text>
-              {media.length > 0 && <Text style={styles.sectionCount}>{media.length}</Text>}
+              <Text style={styles.sectionTitle}>Phương tiện ảnh và voice</Text>
+            </View>
+
+            <View style={styles.tabContainer}>
+              <TouchableOpacity 
+                style={[styles.tabBtn, activeTab === 'media' && styles.tabBtnActive]} 
+                onPress={() => setActiveTab('media')}
+              >
+                <Text style={[styles.tabLabel, activeTab === 'media' && styles.tabLabelActive]}>Ảnh & Video</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tabBtn, activeTab === 'voice' && styles.tabBtnActive]} 
+                onPress={() => setActiveTab('voice')}
+              >
+                <Text style={[styles.tabLabel, activeTab === 'voice' && styles.tabLabelActive]}>Tin nhắn thoại</Text>
+              </TouchableOpacity>
             </View>
           </View>
         }
@@ -185,11 +332,55 @@ export const ChatInfoScreen: React.FC = () => {
             </View>
           )
         }
-        onEndReached={() => fetchMediaData(mediaPage + 1)}
+        onEndReached={() => fetchMediaData(mediaPage + 1, activeTab)}
         onEndReachedThreshold={0.5}
         contentContainerStyle={styles.listContent}
-        columnWrapperStyle={styles.columnWrapper}
+        columnWrapperStyle={activeTab === 'media' ? styles.columnWrapper : undefined}
+        ListFooterComponent={loadingMore ? <ActivityIndicator color={colors.messengerBlue} style={{ marginVertical: spacing.md }} /> : null}
       />
+
+      <Modal visible={previewVisible} transparent animationType="fade">
+        <View style={styles.previewContainer}>
+          <TouchableOpacity 
+            style={styles.previewOverlay} 
+            activeOpacity={1} 
+            onPress={() => setPreviewVisible(false)} 
+          />
+          <View style={styles.previewContent}>
+            <FlatList
+              data={previewData}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              initialScrollIndex={selectedIndex}
+              getItemLayout={(_, index) => ({
+                length: SCREEN_WIDTH,
+                offset: SCREEN_WIDTH * index,
+                index,
+              })}
+              keyExtractor={(item) => item._id}
+              renderItem={({ item }) => (
+                <View style={styles.slide}>
+                  <Image source={{ uri: item.mediaUrl }} style={styles.previewImage} resizeMode="contain" />
+                </View>
+              )}
+            />
+          </View>
+          <TouchableOpacity 
+            style={[styles.closePreview, { top: spacing.xl }]} 
+            onPress={() => setPreviewVisible(false)}
+          >
+            <Icon name="close" size={28} color={colors.white} />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.closePreview, { top: spacing.xl, right: spacing.xl + 40 }]} 
+            onPress={() => handleSaveToGallery(previewData[selectedIndex]?.mediaUrl || '')}
+          >
+            <Icon name="download-outline" size={24} color={colors.white} />
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -271,5 +462,91 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 14,
     fontWeight: '600',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    alignSelf: 'stretch',
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  tabBtnActive: {
+    backgroundColor: colors.messengerBlue,
+  },
+  tabLabel: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  tabLabelActive: {
+    color: colors.white,
+  },
+  voiceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    marginBottom: 1,
+  },
+  voiceIconBg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.messengerBlue,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  voiceInfo: {
+    flex: 1,
+  },
+  voiceTitle: {
+    color: colors.white,
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  voiceDate: {
+    color: colors.textSecondary,
+    fontSize: 12,
+  },
+  previewContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  previewContent: {
+    flex: 1,
+  },
+  slide: {
+    width: SCREEN_WIDTH,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  closePreview: {
+    position: 'absolute',
+    right: spacing.lg,
+    zIndex: 100,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 20,
+    padding: 8,
   },
 });

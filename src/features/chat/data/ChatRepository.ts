@@ -13,6 +13,7 @@ import {
   pinConversationApi,
   markAsUnreadApi,
   uploadMediaApi,
+  markAsDeliveredApi,
 } from '../../../infrastructure/services/chat.service';
 
 export class ChatRepository implements IChatRepository {
@@ -49,6 +50,10 @@ export class ChatRepository implements IChatRepository {
 
   async markAsRead(conversationId: string): Promise<void> {
     await markAsReadApi(conversationId);
+  }
+
+  async markAsDelivered(messageId: string): Promise<void> {
+    await markAsDeliveredApi(messageId);
   }
 
   async deleteMessage(messageId: string, type: 'me' | 'all'): Promise<void> {
