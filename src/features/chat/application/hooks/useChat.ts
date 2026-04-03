@@ -4,6 +4,8 @@ import { fetchConversations } from '../../../../infrastructure/services/chat.ser
 import { onSocketEvent, offSocketEvent } from '../../../../infrastructure/services/socket.service';
 import type { ConversationItem, Message } from '../../domain/types/chat.types';
 import { chatRepository } from '../../data/ChatRepository';
+import { useMatchSelect } from '../../application/hooks/useMatchSelect';
+import { NewMatchUser } from '../../../matches/domain/types/matches.types';
 
 interface UseChat {
   chatList: ConversationItem[];
@@ -19,7 +21,6 @@ interface UseChat {
     blockedByMe?: boolean,
     isBlockedByOther?: boolean
   ) => void;
-  handleEdit: () => void;
   refreshList: () => void;
   pinConversation: (id: string) => Promise<void>;
   unpinConversation: (id: string) => Promise<void>;
@@ -27,6 +28,9 @@ interface UseChat {
   deleteConversation: (id: string) => Promise<void>;
   blockUser: (userId: string) => Promise<void>;
   unblockUser: (userId: string) => Promise<void>;
+  isMatchModalVisible: boolean;
+  toggleMatchModal: () => void;
+  handleMatchSelect: (user: any) => void;
 }
 
 export const useChat = (): UseChat => {
@@ -73,13 +77,32 @@ export const useChat = (): UseChat => {
         return [...result].sort((a, b) => {
           if (a.isPinned && !b.isPinned) return -1;
           if (!a.isPinned && b.isPinned) return 1;
-          return new Date(a.lastMessageAt || 0).getTime() - new Date(b.lastMessageAt || 0).getTime();
+          const aTime = new Date(a.lastMessageAt || 0).getTime();
+          const bTime = new Date(b.lastMessageAt || 0).getTime();
+          return bTime - aTime;
         });
       });
     };
 
     const handleNewMatch = () => loadConversations();
-    const handleStatusUpdate = () => loadConversations();
+    const handleStatusUpdate = (payload: any) => {
+      setChatList((prev) => 
+        prev.map((conv) => {
+          if (conv.user?._id === payload.userId) {
+            return {
+              ...conv,
+              user: {
+                ...conv.user,
+                isOnline: payload.isOnline,
+                lastActive: payload.lastActive,
+              }
+            };
+          }
+          return conv;
+        })
+      );
+    };
+
 
     const handlePinEvent = (payload: { conversationId: string; isPinned: boolean }) => {
       setChatList((prev) => {
@@ -87,7 +110,9 @@ export const useChat = (): UseChat => {
         return [...updated].sort((a, b) => {
           if (a.isPinned && !b.isPinned) return -1;
           if (!a.isPinned && b.isPinned) return 1;
-          return new Date(a.lastMessageAt || 0).getTime() - new Date(b.lastMessageAt || 0).getTime();
+          const aTime = new Date(a.lastMessageAt || 0).getTime();
+          const bTime = new Date(b.lastMessageAt || 0).getTime();
+          return bTime - aTime;
         });
       });
     };
@@ -101,13 +126,12 @@ export const useChat = (): UseChat => {
     };
 
     const handleBlockEvent = (payload: { targetUserId: string; isBlocked: boolean; blockedByMe: boolean }) => {
-      // Refresh the entire list when a block occurs to ensure all flags and visibility are correct
       loadConversations();
     };
 
     onSocketEvent<{ conversationId: string; message: Message }>('message_notification', handleNewMessage);
     onSocketEvent<unknown>('new_match', handleNewMatch);
-    onSocketEvent<unknown>('status_update', handleStatusUpdate);
+    onSocketEvent<any>('status_update', handleStatusUpdate);
     onSocketEvent<{ conversationId: string; isPinned: boolean }>('conversation_pinned', handlePinEvent);
     onSocketEvent<{ conversationId: string; unreadCount: number }>('conversation_unread', handleUnreadEvent);
     onSocketEvent<{ conversationId: string }>('conversation_cleared', handleClearedEvent);
@@ -131,7 +155,9 @@ export const useChat = (): UseChat => {
       return [...updated].sort((a, b) => {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
-        return new Date(a.lastMessageAt || 0).getTime() - new Date(b.lastMessageAt || 0).getTime();
+        const aTime = new Date(a.lastMessageAt || 0).getTime();
+        const bTime = new Date(b.lastMessageAt || 0).getTime();
+        return bTime - aTime;
       });
     });
     try {
@@ -147,7 +173,9 @@ export const useChat = (): UseChat => {
       return [...updated].sort((a, b) => {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
-        return new Date(a.lastMessageAt || 0).getTime() - new Date(b.lastMessageAt || 0).getTime();
+        const aTime = new Date(a.lastMessageAt || 0).getTime();
+        const bTime = new Date(b.lastMessageAt || 0).getTime();
+        return bTime - aTime;
       });
     });
     try {
@@ -178,7 +206,6 @@ export const useChat = (): UseChat => {
   const blockUser = async (userId: string) => {
     try {
       await chatRepository.blockUser(userId);
-      // Socket will handle refresh via handleBlockEvent
     } catch (err) {
       console.error('Block error:', err);
     }
@@ -187,7 +214,6 @@ export const useChat = (): UseChat => {
   const unblockUser = async (userId: string) => {
     try {
       await chatRepository.unblockUser(userId);
-      // Socket will handle refresh via handleBlockEvent
     } catch (err) {
       console.error('Unblock error:', err);
     }
@@ -218,16 +244,30 @@ export const useChat = (): UseChat => {
     [navigation]
   );
 
-  const handleEdit = useCallback(() => {
-    navigation.navigate('Matches');
-  }, [navigation]);
+  const [isMatchModalVisible, setIsMatchModalVisible] = useState(false);
+
+  const toggleMatchModal = useCallback(() => {
+    setIsMatchModalVisible(prev => !prev);
+  }, []);
+
+  const handleMatchSelect = useCallback((user: any) => {
+    // If we already have a conversation with this user in the chatList, use its conversationId
+    const existingConv = chatList.find(c => c.user._id === user.id);
+    
+    navigation.navigate('ChatDetail', {
+      conversationId: existingConv?.id || user.conversationId || user.id,
+      name: user.name,
+      avatar: user.avatar,
+      isOnline: user.isOnline ?? false,
+      otherUserId: user.id,
+    });
+  }, [chatList, navigation]);
 
   return {
     chatList,
     loading,
     error,
     handleChatPress,
-    handleEdit,
     refreshList: loadConversations,
     pinConversation,
     unpinConversation,
@@ -235,5 +275,8 @@ export const useChat = (): UseChat => {
     deleteConversation,
     blockUser,
     unblockUser,
+    isMatchModalVisible,
+    toggleMatchModal,
+    handleMatchSelect,
   };
 };

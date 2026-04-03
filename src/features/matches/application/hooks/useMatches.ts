@@ -69,8 +69,23 @@ export const useMatches = () => {
       fetchData();
 
       const refreshFromSocket = () => fetchData();
+      const handleStatusUpdate = (payload: any) => {
+        setData((prev) => ({
+          ...prev,
+          newMatches: prev.newMatches.map((user) => {
+            const updatedUserId = payload.userId.toString().toLowerCase();
+            const targetId = user.id.toString().toLowerCase();
+
+            if (updatedUserId === targetId) {
+              return { ...user, isOnline: payload.isOnline };
+            }
+            return user;
+          })
+        }));
+      };
+
       onSocketEvent('new_match', refreshFromSocket);
-      onSocketEvent('status_update', refreshFromSocket);
+      onSocketEvent('status_update', handleStatusUpdate);
 
       // Refresh while staying on the screen so users always see the newest match/story data.
       const intervalId = setInterval(fetchData, 12000);
@@ -102,6 +117,7 @@ export const useMatches = () => {
           name: user.name,
           avatar: user.avatar,
           isOnline: user.isOnline ?? false,
+          otherUserId: user.id,
         });
       } else {
         navigation.navigate('MatchProfile', {

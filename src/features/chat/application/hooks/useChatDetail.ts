@@ -3,6 +3,7 @@ import { Message, Reaction } from '../../domain/types/chat.types';
 import { chatRepository } from '../../data/ChatRepository';
 import { chatSocketService } from '../../data/ChatSocketService';
 import { getUser } from '../../../../infrastructure/storage/AsyncStorage';
+import { ProfileService } from '../../../../infrastructure/services/profile.service';
 import { useUnreadCount } from '../../../../shared/providers/UnreadProvider';
 import { useToast } from '../../../../shared/hooks/useToast';
 
@@ -37,6 +38,23 @@ export const useChatDetail = (conversationId: string, initialStatus?: InitialSta
     isOnline: initialStatus?.isOnline ?? false,
     lastActive: initialStatus?.lastActive ?? null,
   });
+
+  const loadPeerStatus = useCallback(async () => {
+    const targetId = otherUserIdRef.current;
+    if (!targetId) return;
+
+    try {
+      const data = await ProfileService.getPublicProfile(targetId);
+      if (data) {
+        setOtherUserStatus({
+          isOnline: data.isOnline ?? false,
+          lastActive: data.lastActive || null,
+        });
+      }
+    } catch (err) {
+      console.warn('[useChatDetail] Failed to load peer status:', err);
+    }
+  }, []);
 
   const otherUserLastReadId = (() => {
     if (!otherUserIdRef.current) return null;
@@ -113,6 +131,8 @@ export const useChatDetail = (conversationId: string, initialStatus?: InitialSta
         setMessages(mapped);
         setPage(1);
         markRead();
+        // Load initial fresh status from API
+        loadPeerStatus();
         // Allow load more only after initial data is rendered and scrolled to bottom
         setTimeout(() => setCanLoadMore(true), 500); 
       }
@@ -205,8 +225,8 @@ export const useChatDetail = (conversationId: string, initialStatus?: InitialSta
       };
 
       const handleStatusUpdate = (payload: { userId: string; isOnline: boolean; lastActive: string }) => {
-        const updatedUserId = payload.userId.toString();
-        const targetUserId = otherUserIdRef.current?.toString();
+        const updatedUserId = payload.userId.toString().toLowerCase();
+        const targetUserId = otherUserIdRef.current?.toString().toLowerCase();
         if (updatedUserId === targetUserId) {
           setOtherUserStatus({ isOnline: payload.isOnline, lastActive: payload.lastActive });
         }

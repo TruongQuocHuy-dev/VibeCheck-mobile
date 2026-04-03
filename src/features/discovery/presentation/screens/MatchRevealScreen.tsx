@@ -48,7 +48,8 @@ export const MatchRevealScreen: React.FC = () => {
       conversationId,
       name: matchedUserName,
       avatar: matchedUserAvatar,
-      isOnline: false,
+      isOnline: route.params?.isOnline ?? false,
+      otherUserId: route.params?.otherUserId,
     });
   };
 

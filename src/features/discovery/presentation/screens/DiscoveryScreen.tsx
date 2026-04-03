@@ -225,6 +225,8 @@ export const DiscoveryScreen: React.FC = () => {
             emoji="✨"
             title="Hết người rồi!"
             subtitle={'Bạn đã xem qua tất cả mọi người trong khu vực.\nQuay lại sau nhé 💫'}
+            actionLabel="Tải lại danh sách"
+            onActionPress={() => refreshCandidates(false)}
           />
         )}
       </View>

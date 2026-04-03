@@ -40,4 +40,6 @@ export const profileMockData: UserProfile = {
       statusLabel: 'Da het han',
     },
   ],
+  birthYear: 1998,
+  location: 'Quận 1, TP. Hồ Chí Minh',
 };

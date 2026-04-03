@@ -4,6 +4,14 @@ import { getAccessToken } from '../storage/AsyncStorage';
 
 let socket: Socket | null = null;
 
+interface SocketListener {
+  event: string;
+  callback: (data: any) => void;
+}
+
+// Registry to keep track of listeners to re-attach upon reconnection or late connection
+const listenerRegistry: SocketListener[] = [];
+
 /**
  * Connect to the Socket.io server with the authenticated userId.
  * Call this after a successful login.
@@ -14,35 +22,39 @@ export const connectSocket = async (userId: string): Promise<void> => {
   const token = await getAccessToken();
   const socketUrl = APP_CONFIG.apiBaseUrl.replace('/api', '');
 
+  console.log(`🔌 [SocketService] Connecting to ${socketUrl} for user ${userId}...`);
+
   socket = io(socketUrl, {
     query: { userId },
     extraHeaders: {
       Authorization: `Bearer ${token ?? ''}`,
     },
-    // Removing explicit websocket transport to allow fallback to polling (more stable for emulators)
-    // transports: ['websocket'],
     reconnection: true,
     reconnectionAttempts: 10,
     reconnectionDelay: 2000,
   });
 
   socket.on('connect', () => {
-    console.log('✅ Socket connected successfully. ID:', socket?.id);
+    console.log('✅ [SocketService] Connected successfully. ID:', socket?.id);
+    
+    // Attach all registered listeners
+    listenerRegistry.forEach(({ event, callback }) => {
+      socket?.on(event, callback);
+    });
+
     const { DeviceEventEmitter } = require('react-native');
     DeviceEventEmitter.emit('socket_connected');
   });
 
   socket.on('disconnect', (reason) => {
-    console.log('🛑 Socket disconnected. Reason:', reason);
+    console.log('🛑 [SocketService] Disconnected. Reason:', reason);
     if (reason === 'io server disconnect') {
-      // the disconnection was initiated by the server, you need to reconnect manually
       socket?.connect();
     }
   });
 
   socket.on('connect_error', (err) => {
-    console.error('❌ Socket connection error:', err.message);
-    console.log('💡 TIP: If on a real device, ensure API_BASE_URL is your computer\'s LAN IP.');
+    console.error('❌ [SocketService] Connection error:', err.message);
   });
 };
 
@@ -72,21 +84,44 @@ export const leaveConversation = (conversationId: string): void => {
 
 /**
  * Listen for a specific socket event.
+ * If the socket is not yet connected, the listener will be attached upon connection.
  */
 export const onSocketEvent = <T>(event: string, callback: (data: T) => void): void => {
-  socket?.on(event, callback);
+  // Add to registry (for reconnection or late connection)
+  const castCallback = callback as (data: any) => void;
+  
+  // Clean up existing identical listener to avoid duplicates
+  const existingIdx = listenerRegistry.findIndex(l => l.event === event && l.callback === castCallback);
+  if (existingIdx === -1) {
+    listenerRegistry.push({ event, callback: castCallback });
+  }
+
+  // Attach immediately if socket exists
+  socket?.on(event, castCallback);
 };
 
 /**
  * Remove a specific socket event listener.
  */
 export const offSocketEvent = <T>(event: string, callback?: (data: T) => void): void => {
-  if (callback) {
-    socket?.off(event, callback as (...args: any[]) => void);
-    return;
-  }
+  const castCallback = callback as (data: any) => void;
 
-  socket?.off(event);
+  // Remove from registry
+  if (callback) {
+    const idx = listenerRegistry.findIndex(l => l.event === event && l.callback === castCallback);
+    if (idx > -1) {
+      listenerRegistry.splice(idx, 1);
+    }
+    socket?.off(event, castCallback);
+  } else {
+    // Remove all for this event
+    for (let i = listenerRegistry.length - 1; i >= 0; i--) {
+      if (listenerRegistry[i].event === event) {
+        listenerRegistry.splice(i, 1);
+      }
+    }
+    socket?.off(event);
+  }
 };
 
 /**

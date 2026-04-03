@@ -35,5 +35,9 @@ export interface UserProfile {
   currentVibe?: CurrentVibe;
   premiumPlan: PremiumPlan;
   pastVibes: PastVibeItem[];
+  isOnline?: boolean;
+  lastActive?: string | null;
   blockedByMe?: boolean;
+  birthYear?: number;
+  location?: string;
 }

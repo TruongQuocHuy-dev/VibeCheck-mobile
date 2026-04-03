@@ -190,11 +190,13 @@ export const DiscoveryDetailScreen: React.FC = () => {
 
     if (matchResult?.isMatch && matchResult.match) {
       console.log('DiscoveryDetail: Navigating to MatchReveal', matchResult.match);
-      const { conversationId, matchedUser } = matchResult.match;
+      const { conversationId, matchedUser } = matchResult.match as any;
       navigation.navigate('MatchReveal', {
         matchedUserName: matchedUser.fullName || matchedUser.displayName,
         matchedUserAvatar: matchedUser.avatar,
         conversationId,
+        otherUserId: matchedUser._id || matchedUser.id,
+        isOnline: matchedUser.isOnline ?? false,
       });
     }
   }, [matchResult, navigation, isFocused]);

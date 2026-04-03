@@ -11,7 +11,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import { colors } from '../../../../core/theme/colors';
 import { spacing, borderRadius } from '../../../../core/theme/spacing';
-import { REACTION_EMOJIS } from '../../data/chat.data';
+import { REACTION_EMOJIS, CHAT_STRINGS } from '../../domain/constants/chat.constants';
 
 interface MessageActionModalProps {
   visible: boolean;
@@ -43,7 +43,6 @@ export const MessageActionModal: React.FC<MessageActionModalProps> = ({
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
             <View style={styles.container}>
-              {/* Emoji Banner - Hide if recalled */}
               {!isRecalled && (
                 <View style={styles.reactionBanner}>
                   <ScrollView
@@ -67,7 +66,6 @@ export const MessageActionModal: React.FC<MessageActionModalProps> = ({
                 </View>
               )}
 
-              {/* Action Menu */}
               <View style={styles.actionMenu}>
                 {!isRecalled && (
                   <>
@@ -78,7 +76,7 @@ export const MessageActionModal: React.FC<MessageActionModalProps> = ({
                         onActionPress('reply');
                       }}
                     >
-                      <Text style={styles.actionText}>Trả lời</Text>
+                      <Text style={styles.actionText}>{CHAT_STRINGS.reply}</Text>
                       <Icon name="arrow-undo-outline" size={20} color={colors.textPrimary} />
                     </TouchableOpacity>
 
@@ -90,7 +88,7 @@ export const MessageActionModal: React.FC<MessageActionModalProps> = ({
                           onActionPress('copy');
                         }}
                       >
-                        <Text style={styles.actionText}>Sao chép</Text>
+                        <Text style={styles.actionText}>{CHAT_STRINGS.copy}</Text>
                         <Icon name="copy-outline" size={20} color={colors.textPrimary} />
                       </TouchableOpacity>
                     )}
@@ -103,7 +101,7 @@ export const MessageActionModal: React.FC<MessageActionModalProps> = ({
                           onActionPress('recall');
                         }}
                       >
-                        <Text style={styles.actionText}>Thu hồi</Text>
+                        <Text style={styles.actionText}>{CHAT_STRINGS.recall}</Text>
                         <Icon name="refresh-outline" size={20} color={colors.textPrimary} />
                       </TouchableOpacity>
                     )}
@@ -115,7 +113,7 @@ export const MessageActionModal: React.FC<MessageActionModalProps> = ({
                           onActionPress('save');
                         }}
                       >
-                        <Text style={styles.actionText}>Lưu ảnh</Text>
+                        <Text style={styles.actionText}>{CHAT_STRINGS.save_image}</Text>
                         <Icon name="download-outline" size={20} color={colors.textPrimary} />
                       </TouchableOpacity>
                     )}
@@ -129,7 +127,7 @@ export const MessageActionModal: React.FC<MessageActionModalProps> = ({
                     onActionPress('delete');
                   }}
                 >
-                  <Text style={styles.actionText}>Xóa ở phía tôi</Text>
+                  <Text style={styles.actionText}>{CHAT_STRINGS.delete_me}</Text>
                   <Icon name="trash-outline" size={20} color={colors.textPrimary} />
                 </TouchableOpacity>
 
@@ -141,7 +139,7 @@ export const MessageActionModal: React.FC<MessageActionModalProps> = ({
                       onActionPress('report');
                     }}
                   >
-                    <Text style={[styles.actionText, styles.reportText]}>Báo cáo</Text>
+                    <Text style={[styles.actionText, styles.reportText]}>{CHAT_STRINGS.report}</Text>
                     <Icon name="flag-outline" size={20} color={colors.error} />
                   </TouchableOpacity>
                 )}
@@ -177,7 +175,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 8,
-    shadowColor: '#000',
+    shadowColor: colors.bgDark,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
@@ -199,7 +197,7 @@ const styles = StyleSheet.create({
     width: '75%',
     overflow: 'hidden',
     elevation: 8,
-    shadowColor: '#000',
+    shadowColor: colors.bgDark,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,

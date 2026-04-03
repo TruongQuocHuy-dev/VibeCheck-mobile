@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
   TextInput, 
@@ -6,10 +6,8 @@ import {
   TouchableOpacity, 
   Text,
   Platform,
-  Dimensions,
   ScrollView,
   PermissionsAndroid,
-  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -17,10 +15,7 @@ import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import { Message } from '../../domain/types/chat.types';
 import { colors } from '../../../../core/theme/colors';
 import { spacing, borderRadius as br } from '../../../../core/theme/spacing';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-const QUICK_EMOJIS = ['❤️', '😂', '😮', '😢', '😡', '👍', '🔥', '🙌', '✨', '👌'];
+import { CHAT_STRINGS } from '../../domain/constants/chat.constants';
 
 interface ChatInputProps {
   onSend: (
@@ -35,6 +30,7 @@ interface ChatInputProps {
 }
 
 const audioRecorderPlayer = new AudioRecorderPlayer();
+const QUICK_EMOJIS = ['❤️', '😂', '😮', '😢', '😡', '👍', '🔥', '🙌', '✨', '👌'];
 
 export const ChatInput: React.FC<ChatInputProps> = ({ 
   onSend, 
@@ -128,7 +124,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         );
 
         if (grants['android.permission.RECORD_AUDIO'] !== PermissionsAndroid.RESULTS.GRANTED) {
-          console.log('Microphone permission not granted');
           return;
         }
       } catch (err) {
@@ -137,12 +132,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       }
     }
     setIsRecording(true);
-    const result = await audioRecorderPlayer.startRecorder();
+    await audioRecorderPlayer.startRecorder();
     audioRecorderPlayer.addRecordBackListener((e) => {
       setRecordTime(audioRecorderPlayer.mmssss(Math.floor(e.currentPosition)));
       return;
     });
-    console.log('Record started:', result);
   };
 
   const onStopRecord = async () => {
@@ -183,7 +177,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         <View style={styles.replyPreview}>
           <View style={styles.replyContent}>
             <Text style={styles.replySender} numberOfLines={1}>
-              Đang trả lời {(replyingTo.sender as any)?.fullName || 'Người dùng'}
+              {CHAT_STRINGS.replying_to} {(replyingTo.sender as any)?.fullName || CHAT_STRINGS.unnamed_user}
             </Text>
             <Text style={styles.replyText} numberOfLines={1}>
               {replyingTo.content}
@@ -218,7 +212,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               <TextInput
                 ref={inputRef}
                 style={styles.input}
-                placeholder="Nhắn tin..."
+                placeholder={CHAT_STRINGS.type_message}
                 placeholderTextColor={colors.textMuted}
                 value={text}
                 onChangeText={handleChangeText}
@@ -239,12 +233,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         ) : (
           <View style={styles.recordingWrapper}>
             <View style={styles.recordingDot} />
-            <Text style={styles.recordingText}>Đang ghi âm... {recordTime}</Text>
+            <Text style={styles.recordingText}>{CHAT_STRINGS.recording} {recordTime}</Text>
             <TouchableOpacity style={styles.cancelRecord} onPress={() => {
               audioRecorderPlayer.stopRecorder();
               setIsRecording(false);
             }}>
-              <Text style={styles.cancelText}>Hủy</Text>
+              <Text style={styles.cancelText}>{CHAT_STRINGS.cancel}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -336,7 +330,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 132, 255, 0.1)',
+    backgroundColor: colors.cyanBg,
     borderRadius: 22,
     paddingHorizontal: spacing.md,
     height: 44,
@@ -345,12 +339,12 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#FF4444',
+    backgroundColor: colors.error,
     marginRight: spacing.sm,
   },
   recordingText: { color: colors.white, flex: 1, fontSize: 14 },
   cancelRecord: { paddingHorizontal: spacing.sm },
-  cancelText: { color: '#FF4444', fontWeight: 'bold' },
+  cancelText: { color: colors.error, fontWeight: 'bold' },
   rightActions: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -14,7 +14,7 @@ interface UseDiscoveryReturn {
   handleLike: () => Promise<void>;
   handleSkip: () => Promise<void>;
   updateFilters: (nextFilters: DiscoveryFilters) => void;
-  refreshCandidates: () => Promise<void>;
+  refreshCandidates: (silent?: boolean) => Promise<void>;
   dismissMatch: () => void;
 }
 
@@ -167,7 +167,7 @@ export const useDiscovery = (): UseDiscoveryReturn => {
       return normalized;
     });
   }, []);
-  const refreshCandidates = useCallback(() => loadCandidates(true), [loadCandidates]);
+  const refreshCandidates = useCallback((silent = true) => loadCandidates(silent), [loadCandidates]);
   const dismissMatch = useCallback(() => {
     setMatchResult(null);
     setMatchQueue((prev) => prev.slice(1));

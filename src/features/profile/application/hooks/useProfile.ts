@@ -86,7 +86,22 @@ export const useProfile = () => {
     };
 
     chatSocketService.onUserBlocked(handleBlockEvent);
-    return () => chatSocketService.offUserBlocked(handleBlockEvent);
+    
+    const handleStatusUpdate = (payload: { userId: string; isOnline: boolean; lastActive: string }) => {
+      const updatedUserId = payload.userId.toString().toLowerCase();
+      const targetId = matchParams.id?.toString().toLowerCase();
+
+      if (isMatchProfile && updatedUserId === targetId) {
+        setMatchProfileData((prev: any) => prev ? { ...prev, isOnline: payload.isOnline, lastActive: payload.lastActive } : prev);
+      }
+    };
+    
+    chatSocketService.onUserStatusUpdate(handleStatusUpdate);
+
+    return () => {
+      chatSocketService.offUserBlocked(handleBlockEvent);
+      chatSocketService.offUserStatusUpdate(handleStatusUpdate);
+    };
   }, [isMatchProfile, matchParams.id, fetchProfile]);
 
   const profile = useMemo<UserProfile>(() => {
@@ -119,6 +134,8 @@ export const useProfile = () => {
       return {
         ...baseProfile,
         bio: apiData?.bio || matchDetail.bio,
+        birthYear: apiData?.birthYear || 2000,
+        location: apiData?.location || 'Gần bạn',
         stats: [
           { id: 'stats-distance', label: 'Distance', value: matchDetail.distanceKm },
           { id: 'stats-vibes', label: 'Vibes', value: apiData?.photos?.length || matchDetail.recentVibePhotos.length },
@@ -131,6 +148,8 @@ export const useProfile = () => {
           expiresIn: 'Con 12h',
           backgroundImage: apiData?.photos?.[0] || matchDetail.recentVibePhotos[0] || profileMockData.currentVibe?.backgroundImage || '',
         },
+        isOnline: apiData?.isOnline || (matchParams.isOnline as boolean) || false,
+        lastActive: apiData?.lastActive || null,
         premiumPlan: profileMockData.premiumPlan,
         pastVibes: (apiData?.photos || matchDetail.recentVibePhotos).map((image: string, index: number) => ({
           id: `${matchDetail.id}-photo-${index}`,
@@ -156,6 +175,8 @@ export const useProfile = () => {
       handle: nickname,
       bio, 
       avatar,
+      birthYear: ownProfileData.birthYear || profileMockData.birthYear,
+      location: ownProfileData.location || profileMockData.location,
       currentVibe: {
         id: 'current',
         text: bio,
@@ -167,7 +188,7 @@ export const useProfile = () => {
         ...profileMockData.stats.slice(1)
       ]
     };
-  }, [isMatchProfile, matchParams, ownProfileData]);
+  }, [isMatchProfile, matchParams, ownProfileData, matchProfileData]);
 
   const hasStats = profile.stats.length > 0;
   const hasPastVibes = profile.pastVibes.length > 0;
@@ -210,11 +231,12 @@ export const useProfile = () => {
     }
 
     navigation.navigate('ChatDetail', {
-      conversationId: matchParams.conversationId || matchParams.id, // Priority to conversationId
+      conversationId: matchParams.conversationId || matchParams.id,
       name: matchParams.name,
       avatar: matchParams.avatar,
-      isOnline: Boolean(matchParams.isOnline),
-      otherUserId: matchParams.id, // userId
+      isOnline: matchProfileData?.isOnline ?? Boolean(matchParams.isOnline),
+      otherUserId: matchParams.id,
+      lastActive: matchProfileData?.lastActive || null,
       blockedByMe: profile.blockedByMe,
     });
   }, [isOwnProfile, matchParams.avatar, matchParams.id, matchParams.isOnline, matchParams.name, navigation, profile.blockedByMe]);
