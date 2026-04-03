@@ -31,10 +31,10 @@ export interface UserProfile {
   avatar: string;
   isVerified: boolean;
   bio?: string;
-  stats: UserStat[];
+  stats?: UserStat[];
   currentVibe?: CurrentVibe;
   premiumPlan: PremiumPlan;
-  pastVibes: PastVibeItem[];
+  pastVibes?: PastVibeItem[];
   isOnline?: boolean;
   lastActive?: string | null;
   blockedByMe?: boolean;

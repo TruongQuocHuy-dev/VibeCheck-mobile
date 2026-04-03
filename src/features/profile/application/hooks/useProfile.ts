@@ -20,6 +20,7 @@ export const useProfile = () => {
   const [ownProfileData, setOwnProfileData] = useState<any>(null);
   const [matchProfileData, setMatchProfileData] = useState<any>(null);
   const [ownVibeStories, setOwnVibeStories] = useState<any[]>([]);
+  const [vibeHistory, setVibeHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [isBlockedByOther, setIsBlockedByOther] = useState(false);
 
@@ -39,6 +40,17 @@ export const useProfile = () => {
         setOwnProfileData(userRes?.user || userRes);
         
         const userId = userRes?.user?._id || userRes?.id;
+        
+        // Fetch User's Stories History
+        let history = [];
+        try {
+          const historyRes: any = await apiClient.get(ENDPOINTS.VIBE_STORIES.USER_HISTORY(userId));
+          history = historyRes.stories || [];
+        } catch (e) {
+          console.log('Error fetching vibe history:', e);
+        }
+        setVibeHistory(history);
+
         const ownStoryGroup = (storiesRes.data?.data?.feed || []).find((group: any) => group.user.id === userId);
         setOwnVibeStories(ownStoryGroup ? ownStoryGroup.stories : []);
       } else if (matchParams.id) {
@@ -151,10 +163,10 @@ export const useProfile = () => {
         isOnline: apiData?.isOnline || (matchParams.isOnline as boolean) || false,
         lastActive: apiData?.lastActive || null,
         premiumPlan: profileMockData.premiumPlan,
-        pastVibes: (apiData?.photos || matchDetail.recentVibePhotos).map((image: string, index: number) => ({
+        pastVibes: (apiData?.vibes || apiData?.photos || matchDetail.recentVibePhotos || []).map((image: string, index: number) => ({
           id: `${matchDetail.id}-photo-${index}`,
           image,
-          statusLabel: 'Dang hoat dong',
+          statusLabel: 'Hoạt động',
         })),
       };
     }
@@ -163,6 +175,7 @@ export const useProfile = () => {
     if (!ownProfileData) return profileMockData; // render mock while loading or on failure
 
     const vibes = ownProfileData.vibes || [];
+    const photos = ownProfileData.photos || [];
     const fullName = ownProfileData.fullName || ownProfileData.displayName || 'Người dùng';
     const nickname = ownProfileData.displayName ? `@${ownProfileData.displayName}` : `@user${ownProfileData.id?.slice(-4)}`;
     const avatar = ownProfileData.avatar || profileMockData.avatar;
@@ -177,6 +190,15 @@ export const useProfile = () => {
       avatar,
       birthYear: ownProfileData.birthYear || profileMockData.birthYear,
       location: ownProfileData.location || profileMockData.location,
+      pastVibes: vibeHistory.length > 0 ? vibeHistory.map((story: any) => ({
+        id: story._id || story.id,
+        image: story.imageUrl,
+        statusLabel: new Date(story.expiresAt) > new Date() ? 'Hoạt động' : 'Đã kết thúc',
+      })) : [...vibes, ...photos].map((image: string, index: number) => ({
+        id: `own-vibe-${index}`,
+        image,
+        statusLabel: 'Kho lưu trữ',
+      })),
       currentVibe: {
         id: 'current',
         text: bio,
@@ -185,16 +207,16 @@ export const useProfile = () => {
       },
       stats: [
         { id: 'stats-vibes', label: 'Vibes', value: vibes.length },
-        ...profileMockData.stats.slice(1)
+        ...(profileMockData.stats || []).slice(1)
       ]
     };
   }, [isMatchProfile, matchParams, ownProfileData, matchProfileData]);
 
-  const hasStats = profile.stats.length > 0;
-  const hasPastVibes = profile.pastVibes.length > 0;
+  const hasStats = (profile.stats || []).length > 0;
+  const hasPastVibes = (profile.pastVibes || []).length > 0;
 
   const statsTotal = useMemo(() => {
-    return profile.stats.reduce((sum, stat) => sum + stat.value, 0);
+    return (profile.stats || []).reduce((sum, stat) => sum + stat.value, 0);
   }, [profile.stats]);
 
   const handleSettingsPress = useCallback(() => {
@@ -268,11 +290,23 @@ export const useProfile = () => {
     handleUnblock,
     isBlockedByOther,
     ownVibeStories,
+    vibeHistory,
     handleOwnStoryPress: () => {
       if (ownVibeStories.length > 0) {
         navigation.navigate('VibeDetail', {
           userId: ownProfileData?._id || ownProfileData?.id,
           stories: ownVibeStories,
+          userName: 'Bạn',
+          userAvatar: ownProfileData?.avatar,
+        });
+      }
+    },
+    handleVibeHistoryPress: (index: number) => {
+      if (vibeHistory.length > 0) {
+        navigation.navigate('VibeDetail', {
+          userId: ownProfileData?._id || ownProfileData?.id,
+          stories: vibeHistory,
+          initialIndex: index,
           userName: 'Bạn',
           userAvatar: ownProfileData?.avatar,
         });

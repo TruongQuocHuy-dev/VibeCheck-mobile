@@ -61,7 +61,6 @@ export const VibeDetailScreen: React.FC = () => {
     handlePressOut,
   } = useVibeDetail();
 
-
   if (!detail) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -72,13 +71,13 @@ export const VibeDetailScreen: React.FC = () => {
   }
 
   const renderStoryContent = () => {
-    if (!detail) return null;
-
     return (
-      <>
+      <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+        {/* Top Overlay: Progress & Header */}
         <LinearGradient
-          colors={['rgba(0,0,0,0.65)', 'rgba(0,0,0,0.15)']}
+          colors={['rgba(0,0,0,0.85)', 'rgba(0,0,0,0)']}
           style={[styles.topOverlay, { paddingTop: insets.top + spacing.xs }]}
+          pointerEvents="box-none"
         >
           <VibeStoryProgressBar
             stories={stories}
@@ -96,36 +95,8 @@ export const VibeDetailScreen: React.FC = () => {
           />
         </LinearGradient>
 
-        {/* Music Video Playback */}
-        {detail.track?.previewUrl && (
-          <Video
-            ref={videoRef}
-            source={{ uri: detail.track.previewUrl }}
-            repeat={true}
-            muted={isMuted}
-            style={{ width: 0, height: 0 }}
-            onLoad={() => {
-              if (detail.track?.startTime) {
-                videoRef.current?.seek(detail.track.startTime);
-              }
-            }}
-            progressUpdateInterval={100}
-            onProgress={({ currentTime }) => {
-              const start = detail.track?.startTime || 0;
-              const duration = detail.track?.musicDuration || 20;
-              if (currentTime >= start + duration) {
-                videoRef.current?.seek(start);
-              }
-            }}
-            onEnd={() => {
-              const start = detail.track?.startTime || 0;
-              videoRef.current?.seek(start);
-            }}
-          />
-        )}
-
-        {/* Touch zones for navigation */}
-        <View style={styles.touchAreaContainer}>
+        {/* Navigation Touch Zones (Invisible) */}
+        <View style={styles.touchAreaContainer} pointerEvents="box-none">
           <TouchableOpacity
             style={styles.touchLeft}
             onPress={handlePrev}
@@ -142,51 +113,72 @@ export const VibeDetailScreen: React.FC = () => {
           />
         </View>
 
-        <View style={styles.centerBlock}>
-          {/* Focal area for the image/story content */}
-        </View>
-
-        <LinearGradient
-          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.8)']}
-          style={[styles.bottomOverlay, { paddingBottom: insets.bottom + spacing.md }]}
+        {/* Bottom Overlay: Caption & Interactions */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.keyboardView}
+          pointerEvents="box-none"
         >
-          {detail.caption ? (
-            <Text style={styles.captionText}>{detail.caption}</Text>
-          ) : null}
-
-          {isOwner && (
-            <TouchableOpacity 
-              style={styles.viewerButton} 
-              onPress={() => setShowInteractions(true)}
-            >
-              <View style={styles.viewerIconList}>
-                {interactions.slice(0, 3).map((inter, idx) => (
-                  <Image 
-                    key={inter._id || `viewer-${idx}`} 
-                    source={{ uri: inter.sender?.avatar }} 
-                    style={[styles.viewerTinyAvatar, { marginLeft: idx > 0 ? -spacing.sm : 0, zIndex: 10 - idx }]} 
-                  />
-                ))}
-              </View>
-              <Text style={styles.viewerCount}>
-                {interactions.length > 0 ? `${interactions.length} lượt tương tác` : 'Chưa có tương tác'}
+          <LinearGradient
+            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.85)']}
+            style={[styles.bottomOverlay, { paddingBottom: insets.bottom + spacing.md }]}
+            pointerEvents="box-none"
+          >
+            {detail.caption ? (
+              <Text style={styles.captionText} numberOfLines={5}>
+                {detail.caption}
               </Text>
-              <Icon name="chevron-up" size={spacing.md} color={colors.textOpacity60} />
-            </TouchableOpacity>
-          )}
+            ) : null}
 
-          {!isOwner && (
-            <VibeReactionsBar
-              quickReactions={quickReactions}
-              selectedReaction={selectedReaction}
-              replyInput={replyInput}
-              setReplyInput={setReplyInput}
-              handleReactionPress={handleReactionPress}
-              handleSendReply={handleSendReply}
-            />
-          )}
-        </LinearGradient>
+            {isOwner ? (
+              <TouchableOpacity
+                style={styles.viewerButton}
+                onPress={() => setShowInteractions(true)}
+              >
+                <View style={styles.viewerIconList}>
+                  {interactions.slice(0, 3).map((inter, idx) => (
+                    <Image
+                      key={inter._id || `viewer-${idx}`}
+                      source={{ uri: inter.sender?.avatar }}
+                      style={[styles.viewerTinyAvatar, { marginLeft: idx > 0 ? -spacing.sm : 0, zIndex: 10 - idx }]}
+                    />
+                  ))}
+                </View>
+                <Text style={styles.viewerCount}>
+                  {interactions.length > 0 ? `${interactions.length} lượt tương tác` : 'Chưa có tương tác'}
+                </Text>
+                <Icon name="chevron-up" size={spacing.md} color={colors.whiteOpacity80} />
+              </TouchableOpacity>
+            ) : (
+              <VibeReactionsBar
+                quickReactions={quickReactions}
+                selectedReaction={selectedReaction}
+                replyInput={replyInput}
+                setReplyInput={setReplyInput}
+                handleReactionPress={handleReactionPress}
+                handleSendReply={handleSendReply}
+              />
+            )}
+          </LinearGradient>
+        </KeyboardAvoidingView>
 
+        {/* Hidden Audio Player */}
+        {detail.track?.previewUrl && (
+          <Video
+            ref={videoRef}
+            source={{ uri: detail.track.previewUrl }}
+            repeat={true}
+            muted={isMuted}
+            style={{ width: 0, height: 0, position: 'absolute' }}
+            onLoad={() => {
+              if (detail.track?.startTime) {
+                videoRef.current?.seek(detail.track.startTime);
+              }
+            }}
+          />
+        )}
+
+        {/* Modals */}
         <VibeInteractionModal
           visible={showInteractions}
           onClose={() => setShowInteractions(false)}
@@ -195,37 +187,29 @@ export const VibeDetailScreen: React.FC = () => {
           isLoading={isInteractionsLoading}
           onRefresh={fetchInteractions}
         />
-      </>
+      </View>
     );
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+    <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
       {detail.backgroundImage ? (
-        <ImageBackground source={{ uri: detail.backgroundImage }} style={styles.storyBackground} blurRadius={0}>
-          <KeyboardAvoidingView
-            style={{ flex: 1 }}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          >
-            {renderStoryContent()}
-          </KeyboardAvoidingView>
-        </ImageBackground>
+        <Image
+          source={{ uri: detail.backgroundImage }}
+          style={StyleSheet.absoluteFill}
+          resizeMode="cover"
+        />
       ) : (
         <LinearGradient
           colors={[colors.vibeGradientStart, colors.vibeGradientEnd]}
-          style={styles.storyBackground}
-        >
-          <KeyboardAvoidingView
-            style={{ flex: 1 }}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          >
-            {renderStoryContent()}
-          </KeyboardAvoidingView>
-        </LinearGradient>
+          style={StyleSheet.absoluteFill}
+        />
       )}
-    </SafeAreaView>
+
+      {renderStoryContent()}
+    </View>
   );
 };
 
@@ -242,26 +226,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.md,
     gap: spacing.sm,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 20,
   },
-  progressRow: {
-    flexDirection: 'row',
-    gap: spacing.xs,
+  keyboardView: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
   },
-  progressTrack: {
-    flex: 1,
-    height: spacing.xs,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.whiteOpacity20,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    backgroundColor: colors.white,
-    height: '100%',
+  bottomOverlay: {
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+    zIndex: 10,
   },
   touchAreaContainer: {
     ...StyleSheet.absoluteFillObject,
     flexDirection: 'row',
-    zIndex: 1, // Above background but below overlays?
+    zIndex: 5,
   },
   touchLeft: {
     width: '30%',
@@ -271,146 +254,20 @@ const styles = StyleSheet.create({
     width: '70%',
     height: '100%',
   },
-  headerRow: {
-    zIndex: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  ownerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  ownerAvatar: {
-    width: spacing.xl,
-    height: spacing.xl,
-    borderRadius: borderRadius.full,
-    borderWidth: 1,
-    borderColor: colors.white,
-    marginRight: spacing.sm,
-  },
-  ownerTextWrap: {
-    flex: 1,
-  },
-  ownerName: {
-    color: colors.white,
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    flexShrink: 1, // Allow name to shrink if too long
-  },
-  ownerNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  ownerTimeDot: {
-    color: colors.textOpacity60,
-    fontSize: spacing.sm,
-  },
-  ownerTimeText: {
-    color: colors.textOpacity80,
-    fontSize: typography.sizes.sm,
-  },
-  ownerMeta: {
-    color: colors.textOpacity80,
-    fontSize: typography.sizes.md,
-    marginTop: 2,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
-  headerMusicWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
-  },
-  headerMusicText: {
-    color: colors.neonCyan,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.medium,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  iconButton: {
-    width: spacing.xl + spacing.sm,
-    height: spacing.xl + spacing.sm,
-    borderRadius: borderRadius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.overlayBorder,
-    backgroundColor: colors.blurLight,
-  },
   centerBlock: {
+    flex: 1,
     paddingHorizontal: spacing.md,
-    gap: spacing.md,
+    justifyContent: 'center',
   },
   captionText: {
     color: colors.white,
     fontSize: typography.sizes.xl,
     lineHeight: typography.sizes.xxl,
     fontWeight: typography.weights.semiBold,
-    textShadowColor: 'rgba(0,0,0,0.35)',
+    textShadowColor: 'rgba(0,0,0,0.4)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 8,
     marginBottom: spacing.sm,
-  },
-  metaPillsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  metaPill: {
-    borderRadius: borderRadius.full,
-    borderWidth: 1,
-    borderColor: colors.overlayBorder,
-    backgroundColor: colors.blurLight,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    gap: spacing.xs,
-  },
-  metaPillText: {
-    color: colors.white,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semiBold,
-  },
-  musicCard: {
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.overlayBorder,
-    backgroundColor: 'rgba(255,255,255,0.88)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.sm,
-    maxWidth: spacing.xxl + spacing.xxl + spacing.xxl + spacing.xl,
-  },
-  musicTextWrap: {
-    flex: 1,
-  },
-  musicTitle: {
-    color: colors.bgDark,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-  },
-  musicArtist: {
-    color: colors.textDark,
-    fontSize: typography.sizes.sm,
-  },
-  bottomOverlay: {
-    paddingHorizontal: spacing.md,
-    gap: spacing.sm,
-    zIndex: 10, // Ensure it's on top of touch navigation area
   },
   reactionsRow: {
     flexDirection: 'row',

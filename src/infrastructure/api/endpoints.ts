@@ -64,5 +64,6 @@ export const ENDPOINTS = {
     REACT: (id: string) => `/vibe-stories/${id}/react`,
     VIEW: (id: string) => `/vibe-stories/${id}/view`,
     INTERACTIONS: (id: string) => `/vibe-stories/${id}/interactions`,
+    USER_HISTORY: (userId: string) => `/vibe-stories/user/${userId}`,
   },
 } as const;
