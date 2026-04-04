@@ -24,6 +24,8 @@ export const useProfileSetup = (onComplete?: () => void): UseProfileSetupReturn 
     birthYear?: string;
   }>({});
 
+  const [onboardingStep, setOnboardingStep] = useState(1);
+
   // Real-time validation effect
   useEffect(() => {
     const newErrors: {

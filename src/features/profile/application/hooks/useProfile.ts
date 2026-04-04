@@ -120,17 +120,19 @@ export const useProfile = () => {
     if (isMatchProfile) {
       const apiData = matchProfileData;
       const matchDetail = getMatchProfileDetail(matchParams.id as string);
-      const displayName = apiData?.fullName || apiData?.displayName || (matchParams.name as string) || 'User';
+      const displayName = apiData?.displayName || (matchParams.name as string) || 'User';
+      const fullName = apiData?.fullName || displayName;
       const blockedByMe = apiData?.blockedByMe || false;
 
       const baseProfile = {
         id: matchParams.id as string,
-        username: apiData?.displayName ? `@${apiData.displayName}` : `@${displayName}`,
-        handle: displayName.toLowerCase().replace(/\s+/g, '.'),
+        fullName: fullName,
+        displayName: apiData?.displayName ? `@${apiData.displayName}` : `@${displayName}`,
         avatar: apiData?.avatar || (matchParams.avatar as string),
         isVerified: false,
         blockedByMe,
         premiumPlan: profileMockData.premiumPlan,
+        gender: apiData?.gender,
       };
 
       if (blockedByMe) {
@@ -139,7 +141,7 @@ export const useProfile = () => {
           stats: [],
           currentVibe: undefined as any,
           pastVibes: [],
-          bio: `Bạn đã chặn ${displayName}`,
+          bio: `Bạn đã chặn ${fullName}`,
         };
       }
 
@@ -177,17 +179,18 @@ export const useProfile = () => {
     const vibes = ownProfileData.vibes || [];
     const photos = ownProfileData.photos || [];
     const fullName = ownProfileData.fullName || ownProfileData.displayName || 'Người dùng';
-    const nickname = ownProfileData.displayName ? `@${ownProfileData.displayName}` : `@user${ownProfileData.id?.slice(-4)}`;
+    const displayName = ownProfileData.displayName ? `@${ownProfileData.displayName}` : `@user${ownProfileData.id?.slice(-4)}`;
     const avatar = ownProfileData.avatar || profileMockData.avatar;
     const bio = ownProfileData.bio || 'Sẵn sàng kết nối';
 
     return {
       ...profileMockData,
       id: ownProfileData._id || ownProfileData.id || profileMockData.id,
-      username: fullName,
-      handle: nickname,
+      fullName: fullName,
+      displayName: displayName,
       bio, 
       avatar,
+      gender: ownProfileData.gender, // Remove default 'male'
       birthYear: ownProfileData.birthYear || profileMockData.birthYear,
       location: ownProfileData.location || profileMockData.location,
       pastVibes: vibeHistory.length > 0 ? vibeHistory.map((story: any) => ({

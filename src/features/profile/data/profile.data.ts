@@ -2,11 +2,12 @@ import { UserProfile } from '../domain/types/profile.types';
 
 export const profileMockData: UserProfile = {
   id: 'profile-john-123',
-  username: '@john123',
-  handle: 'john.doe',
+  fullName: 'Nguyễn Văn A',
+  displayName: '@vanna123',
   avatar:
     'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80',
   isVerified: true,
+  gender: 'male',
   stats: [
     { id: 'stats-vibes', label: 'Vibes', value: 0 },
     { id: 'stats-matches', label: 'Matches', value: 0 },

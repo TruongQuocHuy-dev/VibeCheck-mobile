@@ -36,6 +36,7 @@ export const ProfileSetupScreen: React.FC<ProfileSetupScreenProps> = ({ onComple
     } else {
       hideLoading();
     }
+    return () => hideLoading(); // Ensure loading is hidden on unmount
   }, [loading, showLoading, hideLoading]);
 
   React.useEffect(() => {
@@ -60,6 +61,7 @@ export const ProfileSetupScreen: React.FC<ProfileSetupScreenProps> = ({ onComple
             >
               <Icon name="arrow-left" size={24} color={colors.textOpacity60} />
             </TouchableOpacity>
+            
             <Text style={styles.headerTitle}>Tạo Vibe</Text>
 
             <TouchableOpacity
@@ -67,7 +69,9 @@ export const ProfileSetupScreen: React.FC<ProfileSetupScreenProps> = ({ onComple
               disabled={!isFormValid || loading}
               style={styles.headerNext}
             >
-              <Text style={[styles.nextText, (!isFormValid || loading) && styles.nextTextDisabled]}>Bắt đầu</Text>
+              <Text style={[styles.nextText, (!isFormValid || loading) && styles.nextTextDisabled]}>
+                Bắt đầu
+              </Text>
             </TouchableOpacity>
           </View>
 

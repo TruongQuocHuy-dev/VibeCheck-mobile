@@ -35,6 +35,12 @@ export const useSettings = () => {
       case 'edit-vibe-card':
         navigation.navigate('VibeCardEditor');
         break;
+      case 'change-password':
+        navigation.navigate('ChangePassword');
+        break;
+      case 'blocked-list':
+        navigation.navigate('BlockedList');
+        break;
       case 'faq':
         console.log('Open FAQ');
         break;

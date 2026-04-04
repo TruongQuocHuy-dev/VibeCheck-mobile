@@ -33,8 +33,6 @@ export const ProfileScreen: React.FC = () => {
     isOwnProfile,
     ownProfileData,
     hasPastVibes,
-    hasStats,
-    statsTotal,
     handleSettingsPress,
     handleBack,
     handleEditAvatar,
@@ -44,12 +42,13 @@ export const ProfileScreen: React.FC = () => {
     ownVibeStories,
     handleOwnStoryPress,
     handleVibeHistoryPress,
+    vibeHistory,
   } = useProfile();
 
-  const contentBottomPadding = insets.bottom + spacing.xxl;
+  const contentBottomPadding = insets.bottom + 120; // Increased to ensure visibility above Tab Bar
 
-  const vibeColumns = 3;
-  const vibeCardSize = (SCREEN_WIDTH - spacing.lg * 2 - spacing.sm * (vibeColumns - 1)) / vibeColumns;
+  const storyColumns = 3;
+  const storySize = (SCREEN_WIDTH - spacing.lg * 2 - spacing.sm * (storyColumns - 1)) / storyColumns;
 
   if (isOwnProfile && loading && !ownProfileData) {
     return (
@@ -80,232 +79,190 @@ export const ProfileScreen: React.FC = () => {
     );
   }
 
+  const genderLabel = 
+    profile.gender === 'male' ? 'Nam' : 
+    profile.gender === 'female' ? 'Nữ' : 
+    profile.gender === 'other' ? 'Khác' : 'Chưa cập nhật';
+  const genderIcon =
+    profile.gender === 'male' ? 'male' :
+      profile.gender === 'female' ? 'female' : 'person-outline';
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={colors.bgDark} />
+
+      {/* Header Navigation */}
+      <View style={styles.header}>
+        {isOwnProfile ? (
+          <View style={styles.headerSide} />
+        ) : (
+          <View style={styles.headerSide}>
+            <TouchableOpacity style={styles.iconButton} activeOpacity={0.85} onPress={handleBack}>
+              <Icon name="chevron-back" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <Text style={styles.headerTitle} numberOfLines={1}>
+          {isOwnProfile ? 'Trang cá nhân' : profile.fullName}
+        </Text>
+
+        <View style={[styles.headerSide, styles.headerSideRight]}>
+          {isOwnProfile ? (
+            <TouchableOpacity style={styles.iconButton} activeOpacity={0.85} onPress={handleSettingsPress}>
+              <Icon name="settings-outline" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.headerSpacer} />
+          )}
+        </View>
+      </View>
 
       <ScrollView
         contentContainerStyle={[styles.contentContainer, { paddingBottom: contentBottomPadding }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerSide}>
-            {!isOwnProfile && (
-              <TouchableOpacity style={styles.iconButton} activeOpacity={0.85} onPress={handleBack}>
-                <Icon name="arrow-back" size={spacing.lg} color={colors.textPrimary} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <Text style={styles.headerTitle}>{isOwnProfile ? 'Trang cá nhân' : ''}</Text>
-
-          <View style={[styles.headerSide, styles.headerSideRight]}>
-            {isOwnProfile ? (
-              <TouchableOpacity style={styles.iconButton} activeOpacity={0.85} onPress={handleSettingsPress}>
-                <Icon name="settings-outline" size={spacing.lg} color={colors.textPrimary} />
-              </TouchableOpacity>
-            ) : (
-              !profile.blockedByMe && (
-                <TouchableOpacity style={styles.messageButton} activeOpacity={0.9} onPress={handleMessagePress}>
-                  <Icon name="chatbubble-ellipses" size={spacing.md} color={colors.white} />
-                  <Text style={styles.messageButtonText}>Nhắn tin</Text>
-                </TouchableOpacity>
-              )
-            )}
-          </View>
-        </View>
-
-        {/* Profile Info Section */}
-        <View style={styles.profileSection}>
+        {/* Profile Main Section */}
+        <View style={styles.profileMain}>
           <TouchableOpacity
-            style={styles.avatarWrap}
-            onPress={ownVibeStories && ownVibeStories.length > 0 ? handleOwnStoryPress : undefined}
-            activeOpacity={0.85}
+            style={styles.avatarContainer}
+            onPress={() => isOwnProfile ? navigation.navigate('VibeCardEditor') : (ownVibeStories.length > 0 ? handleOwnStoryPress() : undefined)}
+            activeOpacity={0.9}
           >
             <LinearGradient
               colors={[colors.neonCyan, colors.primary, colors.neonPink]}
-              style={styles.avatarGradientRing}
+              style={styles.avatarRing}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-            />
-            <Image source={{ uri: profile.avatar }} style={styles.avatar} />
-            
-            {!isOwnProfile && profile.isOnline && (
-              <View style={styles.onlineBadge} />
-            )}
+            >
+              <View style={styles.avatarInner}>
+                <Image source={{ uri: profile.avatar }} style={styles.avatarImage} />
+              </View>
+            </LinearGradient>
 
             {isOwnProfile && (
               <TouchableOpacity
-                style={styles.editAvatarButton}
+                style={styles.cameraBadge}
                 activeOpacity={0.9}
-                onPress={handleEditAvatar}
+                onPress={() => navigation.navigate('VibeCardEditor')}
               >
-                <Icon name="camera" size={spacing.md_sm} color={colors.white} />
+                <Icon name="camera" size={16} color={colors.white} />
               </TouchableOpacity>
+            )}
+
+            {!isOwnProfile && profile.isOnline && (
+              <View style={styles.activeIndicator} />
             )}
           </TouchableOpacity>
 
-          <View style={styles.nameRow}>
-            <Text style={styles.username}>{profile.username}</Text>
-            {profile.isVerified && (
-              <Icon name="checkmark-circle" size={spacing.lg} color={colors.neonCyan} />
-            )}
+          <View style={styles.nameBlock}>
+            <View style={styles.fullNameRow}>
+              <Text style={styles.fullNameText}>{profile.fullName}</Text>
+              {profile.isVerified && (
+                <Icon name="checkmark-circle" size={20} color={colors.neonCyan} />
+              )}
+            </View>
+            <Text style={styles.displayNameText}>{profile.displayName}</Text>
           </View>
-          <Text style={styles.handle}>{profile.handle}</Text>
 
           {profile.bio && (
-            <View style={styles.bioContainer}>
-              <Text style={styles.bioText}>{profile.bio}</Text>
-            </View>
-          )}
-
-          {profile.blockedByMe && (
-            <View style={styles.blockedBanner}>
-              <Icon name="lock-closed" size={24} color={colors.error} />
-              <Text style={styles.blockedBannerText}>Bạn đã chặn người dùng này</Text>
-              <Text style={styles.blockedBannerSubtext}>VibeCheck sẽ ẩn các hoạt động và hình ảnh của họ để bảo vệ sự riêng tư của bạn.</Text>
-
-              <TouchableOpacity style={styles.unblockActionBtn} onPress={handleUnblock}>
-                <Text style={styles.unblockActionBtnText}>Bỏ chặn</Text>
-              </TouchableOpacity>
+            <View style={styles.bioBox}>
+              <Text style={styles.bioContent}>{profile.bio}</Text>
             </View>
           )}
         </View>
 
-        {/* Stats Section */}
-        {!profile.blockedByMe && hasStats && (
-          <View style={styles.statsSection}>
-            <View style={styles.statsCard}>
-              {profile.stats?.map((stat, index) => (
-                <View key={stat.id} style={[styles.statItem, index > 0 && styles.statDivider]}>
-                  <Text style={styles.statValue}>{stat.value}</Text>
-                  <Text style={styles.statLabel}>{stat.label}</Text>
-                </View>
+        {/* Basic Information Grid */}
+        <View style={styles.infoGrid}>
+          <Text style={styles.sectionHeading}>Thông tin cơ bản</Text>
+          <View style={styles.gridRow}>
+            <TouchableOpacity
+              style={styles.gridItem}
+              activeOpacity={isOwnProfile ? 0.7 : 1}
+              onPress={() => isOwnProfile && navigation.navigate('VibeCardEditor')}
+            >
+              <View style={[styles.itemIconWrap, { backgroundColor: 'rgba(0, 240, 255, 0.1)' }]}>
+                <Icon name={genderIcon} size={20} color={colors.neonCyan} />
+              </View>
+              <View style={styles.itemTextContent}>
+                <Text style={styles.itemLabel}>Giới tính</Text>
+                <Text
+                  style={[
+                    styles.itemValue,
+                    !profile.gender && isOwnProfile && { color: colors.neonCyan }
+                  ]}
+                  numberOfLines={1}
+                >
+                  {genderLabel}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <View style={styles.gridItem}>
+              <View style={[styles.itemIconWrap, { backgroundColor: 'rgba(255, 0, 191, 0.1)' }]}>
+                <Icon name="calendar-outline" size={20} color={colors.neonPink} />
+              </View>
+              <View style={styles.itemTextContent}>
+                <Text style={styles.itemLabel}>Năm sinh</Text>
+                <Text style={styles.itemValue}>{profile.birthYear || 'Chưa cập nhật'}</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={[styles.gridRow, { marginTop: spacing.md }]}>
+            <View style={[styles.gridItem, { flex: 1 }]}>
+              <View style={[styles.itemIconWrap, { backgroundColor: 'rgba(57, 255, 20, 0.1)' }]}>
+                <Icon name="location-outline" size={20} color={colors.neonGreen} />
+              </View>
+              <View style={styles.itemTextContent}>
+                <Text style={styles.itemLabel}>Vị trí</Text>
+                <Text style={styles.itemValue} numberOfLines={1}>{profile.location || 'Chưa cập nhật'}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Story History Section */}
+        <View style={styles.storySection}>
+          <View style={styles.storyHeader}>
+            <Text style={styles.sectionHeading}>Lịch sử story</Text>
+            <Text style={styles.storyCount}>{profile.pastVibes?.length || 0} mục</Text>
+          </View>
+
+          {hasPastVibes ? (
+            <View style={styles.storyGrid}>
+              {profile.pastVibes?.map((story, index) => (
+                <TouchableOpacity
+                  key={story.id}
+                  style={[styles.storyCard, { width: storySize, height: storySize * 1.3 }]}
+                  activeOpacity={0.85}
+                  onPress={() => isOwnProfile && handleVibeHistoryPress(index)}
+                >
+                  <Image source={{ uri: story.image }} style={styles.storyImage} />
+                  <LinearGradient
+                    colors={['transparent', 'rgba(0,0,0,0.8)']}
+                    style={styles.storyOverlay}
+                  >
+                    <Text style={styles.storyStatus}>{story.statusLabel}</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
               ))}
             </View>
-          </View>
-        )}
-
-        {/* Basic Info Section */}
-        {!profile.blockedByMe && (
-          <View style={styles.infoSection}>
-            <Text style={styles.sectionTitle}>Thông tin cơ bản</Text>
-            
-            <View style={styles.infoCard}>
-              <View style={styles.infoItem}>
-                <View style={styles.infoIconWrap}>
-                  <Icon name="calendar-outline" size={20} color={colors.neonCyan} />
-                </View>
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Tuổi</Text>
-                  <Text style={styles.infoValue}>
-                    {profile.birthYear ? `${new Date().getFullYear() - profile.birthYear} tuổi` : 'Chưa cập nhật'}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.infoDivider} />
-
-              <View style={styles.infoItem}>
-                <View style={styles.infoIconWrap}>
-                  <Icon name="location-outline" size={20} color={colors.neonPink} />
-                </View>
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Vị trí</Text>
-                  <Text style={styles.infoValue} numberOfLines={1}>
-                    {profile.location || 'Bí mật'}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.infoDivider} />
-
-              <View style={styles.infoItem}>
-                <View style={styles.infoIconWrap}>
-                  <Icon name="shield-checkmark-outline" size={20} color={colors.success} />
-                </View>
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Trạng thái</Text>
-                  <Text style={styles.infoValue}>
-                    {profile.isVerified ? 'Đã xác thực' : 'Thành viên mới'}
-                  </Text>
-                </View>
-              </View>
-
-              {!isOwnProfile && profile.isOnline && (
-                <>
-                  <View style={styles.infoDivider} />
-                  <View style={styles.infoItem}>
-                    <View style={styles.infoIconWrap}>
-                      <Icon name="radio-button-on" size={20} color={colors.neonGreen} />
-                    </View>
-                    <View style={styles.infoContent}>
-                      <Text style={styles.infoLabel}>Hoạt động</Text>
-                      <Text style={[styles.infoValue, { color: colors.neonGreen }]}>Đang trực tuyến</Text>
-                    </View>
-                  </View>
-                </>
-              )}
+          ) : (
+            <View style={styles.emptyStory}>
+              <Icon name="image-outline" size={48} color={colors.textMuted} />
+              <Text style={styles.emptyText}>Chưa có lịch sử story nào để hiển thị.</Text>
             </View>
-          </View>
-        )}
+          )}
+        </View>
 
-        {/* Vibe History Section */}
-        {!profile.blockedByMe && (
-          <View style={styles.vibeSection}>
-            <View style={styles.vibeSectionHeader}>
-              <Text style={styles.sectionTitle}>Vibe đã đăng</Text>
-              {hasPastVibes && (
-                <Text style={styles.vibeCount}>{profile.pastVibes?.length || 0} ảnh</Text>
-              )}
-            </View>
-            
-            {hasPastVibes ? (
-              <View style={styles.vibeGrid}>
-                {profile.pastVibes?.map((vibe, index) => (
-                  <TouchableOpacity
-                    key={vibe.id}
-                    style={[styles.vibeCard, { width: vibeCardSize, height: vibeCardSize }]}
-                    activeOpacity={0.85}
-                    onPress={() => isOwnProfile && handleVibeHistoryPress(index)}
-                  >
-                    <Image source={{ uri: vibe.image }} style={styles.vibeImage} />
-                    <LinearGradient
-                      colors={['transparent', 'rgba(0,0,0,0.7)']}
-                      style={styles.vibeOverlay}
-                    >
-                      <View style={styles.vibeStatusContainer}>
-                        <View style={[
-                          styles.vibeStatusDot,
-                          vibe.statusLabel === 'Hoạt động' && styles.vibeStatusDotActive
-                        ]} />
-                        <Text style={[
-                          styles.vibeStatus,
-                          vibe.statusLabel === 'Hoạt động' && styles.vibeStatusActive
-                        ]}>
-                          {vibe.statusLabel}
-                        </Text>
-                      </View>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.emptyVibeContainer}>
-                <View style={styles.emptyVibeIconWrap}>
-                  <Icon name="camera-outline" size={40} color={colors.textMuted} />
-                </View>
-                <Text style={styles.emptyVibeText}>
-                  {isOwnProfile ? 'Bạn chưa đăng vibe nào' : `${profile.username} chưa chia sẻ vibe`}
-                </Text>
-                {isOwnProfile && (
-                  <TouchableOpacity style={styles.createVibeButton} activeOpacity={0.9}>
-                    <Text style={styles.createVibeButtonText}>Tạo vibe đầu tiên</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
+        {profile.blockedByMe && (
+          <View style={styles.blockedNotice}>
+            <Icon name="lock-closed" size={24} color={colors.error} />
+            <Text style={styles.blockedTitle}>Bạn đã chặn người dùng này</Text>
+            <TouchableOpacity style={styles.unblockBtn} onPress={handleUnblock}>
+              <Text style={styles.unblockBtnText}>Bỏ chặn ngay</Text>
+            </TouchableOpacity>
           </View>
         )}
       </ScrollView>
@@ -326,20 +283,23 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
-    gap: spacing.lg,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
   },
   headerSide: {
-    width: spacing.xxl + spacing.md,
+    width: 60,
+    alignItems: 'flex-start',
     justifyContent: 'center',
   },
   headerSideRight: {
     alignItems: 'flex-end',
+  },
+  headerSpacer: {
+    width: 60,
   },
   headerTitle: {
     flex: 1,
@@ -347,6 +307,7 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
     color: colors.textPrimary,
+    letterSpacing: 0.5,
   },
   iconButton: {
     width: 44,
@@ -359,62 +320,66 @@ const styles = StyleSheet.create({
     borderColor: colors.overlayBorder,
   },
   messageButton: {
+    width: 44,
     height: 44,
-    paddingHorizontal: spacing.md,
-    justifyContent: 'center',
     borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
   },
-  messageButtonText: {
-    color: colors.white,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semiBold,
-  },
-  profileSection: {
+  profileMain: {
     alignItems: 'center',
+    marginTop: spacing.md,
+    marginBottom: spacing.xl,
   },
-  avatarWrap: {
-    width: avatarSize,
-    height: avatarSize,
-    borderRadius: borderRadius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
+  avatarContainer: {
     position: 'relative',
+    marginBottom: spacing.lg,
   },
-  avatarGradientRing: {
-    position: 'absolute',
-    width: avatarSize + 8,
-    height: avatarSize + 8,
-    borderRadius: borderRadius.full,
-  },
-  avatar: {
-    width: avatarSize,
-    height: avatarSize,
-    borderRadius: borderRadius.full,
-    borderWidth: 3,
-    borderColor: colors.bgDark,
-  },
-  editAvatarButton: {
-    position: 'absolute',
-    right: 4,
-    bottom: 4,
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  avatarRing: {
+    width: 124,
+    height: 124,
+    borderRadius: 62,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  avatarInner: {
+    width: 116,
+    height: 116,
+    borderRadius: 58,
+    backgroundColor: colors.bgDark,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    borderWidth: 4,
+    borderColor: colors.bgDark,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  cameraBadge: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: colors.primary,
     borderWidth: 3,
     borderColor: colors.bgDark,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
-  onlineBadge: {
+  activeIndicator: {
     position: 'absolute',
-    bottom: 6,
-    right: 6,
+    bottom: 8,
+    right: 12,
     width: 16,
     height: 16,
     borderRadius: 8,
@@ -422,220 +387,142 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: colors.bgDark,
   },
-  nameRow: {
+  nameBlock: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  fullNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    marginTop: spacing.xs,
   },
-  username: {
-    fontSize: typography.sizes.xxl,
+  fullNameText: {
+    fontSize: 24,
     fontWeight: typography.weights.heavy,
     color: colors.textPrimary,
   },
-  handle: {
+  displayNameText: {
     fontSize: typography.sizes.md,
     color: colors.textSecondary,
-    marginTop: 2,
+    fontWeight: typography.weights.medium,
   },
-  bioContainer: {
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.bgTooltip,
-    borderWidth: 1,
-    borderColor: colors.overlayBorder,
-    width: '100%',
+  bioBox: {
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
   },
-  bioText: {
+  bioContent: {
+    fontSize: typography.sizes.md,
     color: colors.textOpacity80,
-    fontSize: typography.sizes.md,
-    lineHeight: 22,
     textAlign: 'center',
+    lineHeight: 22,
   },
-  statsSection: {
-    marginTop: spacing.sm,
-  },
-  statsCard: {
-    flexDirection: 'row',
+  infoGrid: {
+    marginTop: spacing.md,
     backgroundColor: colors.bgTooltip,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.xxl,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.md_sm, // Reduced from xl to make it wider
     borderWidth: 1,
     borderColor: colors.overlayBorder,
-    paddingVertical: spacing.md,
-    overflow: 'hidden',
   },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statDivider: {
-    borderLeftWidth: 1,
-    borderLeftColor: colors.overlayBorder,
-  },
-  statValue: {
-    fontSize: typography.sizes.xl,
+  sectionHeading: {
+    fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
     color: colors.textPrimary,
-    marginBottom: 2,
-  },
-  statLabel: {
-    fontSize: typography.sizes.xs,
-    color: colors.textSecondary,
-    fontWeight: typography.weights.medium,
+    marginBottom: spacing.xl, // More breathing room
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1.5,
+    opacity: 0.9,
   },
-  infoSection: {
-    marginTop: spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.textPrimary,
-    marginBottom: spacing.md,
-  },
-  infoCard: {
-    backgroundColor: colors.bgTooltip,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.overlayBorder,
-    overflow: 'hidden',
-  },
-  infoItem: {
+  gridRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
-    gap: spacing.md,
+    gap: spacing.lg, // Increased gap
   },
-  infoContent: {
+  gridItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    overflow: 'hidden',
+  },
+  itemTextContent: {
     flex: 1,
   },
-  infoIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.whiteOpacity10,
+  itemIconWrap: {
+    width: 46, // Slightly larger icons for better presence
+    height: 46,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  infoLabel: {
+  itemLabel: {
     fontSize: typography.sizes.xs,
-    color: colors.textSecondary,
-    fontWeight: typography.weights.medium,
+    color: colors.textMuted,
+    fontWeight: typography.weights.bold,
     marginBottom: 2,
   },
-  infoValue: {
+  itemValue: {
     fontSize: typography.sizes.md,
     color: colors.textPrimary,
     fontWeight: typography.weights.semiBold,
   },
-  infoDivider: {
-    height: 1,
-    backgroundColor: colors.overlayBorder,
-    marginHorizontal: spacing.md,
+  storySection: {
+    marginTop: spacing.xxl,
   },
-  vibeSection: {
-    marginTop: spacing.sm,
-  },
-  vibeSectionHeader: {
+  storyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
-  vibeCount: {
+  storyCount: {
     fontSize: typography.sizes.sm,
     color: colors.textSecondary,
     fontWeight: typography.weights.medium,
   },
-  vibeGrid: {
+  storyGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  vibeCard: {
-    borderRadius: borderRadius.md,
+  storyCard: {
+    borderRadius: borderRadius.lg,
     overflow: 'hidden',
     backgroundColor: colors.bgTooltip,
     borderWidth: 1,
     borderColor: colors.overlayBorder,
   },
-  vibeImage: {
+  storyImage: {
     width: '100%',
     height: '100%',
   },
-  vibeOverlay: {
+  storyOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    padding: spacing.xs,
-    height: '45%',
+    padding: spacing.sm,
+    height: '40%',
     justifyContent: 'flex-end',
   },
-  vibeStatusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs / 2,
-    justifyContent: 'center',
-  },
-  vibeStatusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.textSecondary,
-  },
-  vibeStatusDotActive: {
-    backgroundColor: colors.neonCyan,
-  },
-  vibeStatus: {
+  storyStatus: {
     color: colors.white,
     fontSize: 10,
     fontWeight: 'bold',
     textTransform: 'uppercase',
-    opacity: 0.8,
+    opacity: 0.9,
   },
-  vibeStatusActive: {
-    color: colors.neonCyan,
-    opacity: 1,
-  },
-  emptyVibeContainer: {
+  emptyStory: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.xxl,
-    backgroundColor: colors.bgTooltip,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.overlayBorder,
+    paddingVertical: spacing.xxl,
     gap: spacing.md,
   },
-  emptyVibeIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.whiteOpacity10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyVibeText: {
-    color: colors.textSecondary,
+  emptyText: {
     fontSize: typography.sizes.md,
+    color: colors.textMuted,
     textAlign: 'center',
-  },
-  createVibeButton: {
-    marginTop: spacing.xs,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-  },
-  createVibeButtonText: {
-    color: colors.white,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semiBold,
   },
   unavailableContainer: {
     flex: 1,
@@ -656,36 +543,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
-  blockedBanner: {
-    marginTop: spacing.xl,
+  blockedNotice: {
+    marginTop: spacing.xxl,
     padding: spacing.xl,
     backgroundColor: 'rgba(255, 69, 58, 0.05)',
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.xl,
     borderWidth: 1,
     borderColor: 'rgba(255, 69, 58, 0.1)',
     alignItems: 'center',
-    gap: spacing.sm,
-    width: '100%',
+    gap: spacing.md,
   },
-  blockedBannerText: {
-    fontSize: typography.sizes.lg,
+  blockedTitle: {
+    fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
     color: colors.textPrimary,
   },
-  blockedBannerSubtext: {
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  unblockActionBtn: {
+  unblockBtn: {
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.full,
-    marginTop: spacing.sm,
   },
-  unblockActionBtnText: {
+  unblockBtnText: {
     color: colors.white,
     fontWeight: typography.weights.bold,
     fontSize: typography.sizes.md,

@@ -18,6 +18,8 @@ import { CreateVibeScreen } from '../features/vibe/presentation/screens/CreateVi
 import { VibeDetailScreen } from '../features/vibe/presentation/screens/VibeDetailScreen';
 import { FeedScreen } from '../features/posts/presentation/screens/FeedScreen';
 import { VibeCardEditorScreen } from '../features/profile/presentation/screens/VibeCardEditorScreen';
+import { ChangePasswordScreen } from '../features/auth/presentation/screens/ChangePasswordScreen';
+import { BlockedListScreen } from '../features/profile/presentation/screens/BlockedListScreen';
 
 import { getUser, getAccessToken } from '../infrastructure/storage/AsyncStorage';
 import apiClient from '../infrastructure/api/axios';
@@ -33,8 +35,8 @@ export const AppNavigator = () => {
   const [appState, setAppState] = React.useState<'LOADING' | 'AUTH' | 'ONBOARDING_PASS' | 'ONBOARDING_PROFILE' | 'ONBOARDING_VIBES' | 'MAIN'>('LOADING');
   const appStateRef = React.useRef(AppState.currentState);
 
-  React.useEffect(() => {
-    const hydrate = async () => {
+  const checkAndNavigate = React.useCallback(async () => {
+    try {
       const token = await getAccessToken();
       const user: any = await getUser();
 
@@ -43,36 +45,38 @@ export const AppNavigator = () => {
         return;
       }
 
-      try {
-        // Verify token validity on startup
-        const res: any = await apiClient.get(ENDPOINTS.USER.GET_PROFILE);
-        const apiUser = res?.user || res?.data;
+      // Always fetch fresh profile to ensure sync after login/startup
+      const res: any = await apiClient.get(ENDPOINTS.USER.GET_PROFILE);
+      const apiUser = res?.user || res?.data;
 
-        if (apiUser) {
-          const { saveUser } = require('../infrastructure/storage/AsyncStorage');
-          await saveUser(apiUser); // Save full profile with ID
-        }
-
-        if (user.hasPassword === false) {
-          setAppState('ONBOARDING_PASS');
-        } else if (user.isProfileComplete === false) {
-          setAppState('ONBOARDING_PROFILE');
-        } else if (!apiUser?.vibes || apiUser.vibes.length === 0) {
-          setAppState('ONBOARDING_VIBES');
-        } else {
-          setAppState('MAIN');
-        }
-      } catch (err) {
-        // Token is expired or invalid
-        if (user?.hasPassword) {
-          setAppState('ONBOARDING_PASS'); // Force enter password (Login)
-        } else {
-          setAppState('AUTH');
-        }
+      if (apiUser) {
+        const { saveUser } = require('../infrastructure/storage/AsyncStorage');
+        await saveUser(apiUser); // Save full profile
       }
-    };
-    hydrate();
-  }, []);
+
+      // Decision logic correctly based on latest API state
+      if (apiUser?.hasPassword === false) {
+        setAppState('ONBOARDING_PASS');
+      } else if (apiUser?.isProfileComplete === false) {
+        setAppState('ONBOARDING_PROFILE');
+      } else if (!apiUser?.vibes || apiUser.vibes.length === 0) {
+        setAppState('ONBOARDING_VIBES');
+      } else {
+        setAppState('MAIN');
+      }
+    } catch (err) {
+      const user: any = await getUser();
+      if (user?.hasPassword) {
+        setAppState('ONBOARDING_PASS');
+      } else {
+        setAppState('AUTH');
+      }
+    }
+  }, [refreshUnread]);
+
+  React.useEffect(() => {
+    checkAndNavigate();
+  }, [checkAndNavigate]);
 
   React.useEffect(() => {
     const sub = DeviceEventEmitter.addListener('unauthorized_token_expired', () => {
@@ -80,12 +84,7 @@ export const AppNavigator = () => {
     });
 
     const sub2 = DeviceEventEmitter.addListener('login_success_reauth', async () => {
-      const user: any = await getUser();
-      if (user?.isProfileComplete) {
-        setAppState('MAIN');
-      } else {
-        setAppState('ONBOARDING_PROFILE');
-      }
+      await checkAndNavigate(); // Now uses fresh API data
     });
 
     const sub3 = DeviceEventEmitter.addListener('logout', async () => {
@@ -274,6 +273,14 @@ export const AppNavigator = () => {
         <>
           <Stack.Screen name="Main" component={TabNavigator} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="ProfileSetup">
+            {props => (
+              <ProfileSetupScreen
+                {...props}
+                onComplete={() => props.navigation.goBack()}
+              />
+            )}
+          </Stack.Screen>
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="CreateVibe" component={CreateVibeScreen} />
           <Stack.Screen name="VibeDetail" component={VibeDetailScreen} />
@@ -288,6 +295,8 @@ export const AppNavigator = () => {
           />
           <Stack.Screen name="Feed" component={FeedScreen} />
           <Stack.Screen name="VibeCardEditor" component={VibeCardEditorScreen} />
+          <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+          <Stack.Screen name="BlockedList" component={BlockedListScreen} />
         </>
       )}
     </Stack.Navigator>

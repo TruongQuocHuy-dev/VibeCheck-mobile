@@ -9,6 +9,7 @@ export const ENDPOINTS = {
     SET_PASSWORD: '/auth/set-password',
     LOGIN: '/auth/login',
     GOOGLE_LOGIN: '/auth/google-login',
+    CHANGE_PASSWORD: '/auth/change-password',
   },
   USER: {
     GET_PROFILE: '/users/profile',
@@ -21,6 +22,7 @@ export const ENDPOINTS = {
     PUBLIC_PROFILE: (id: string) => `/users/${id}/profile`,
     BLOCK: '/users/block',
     UNBLOCK: '/users/unblock',
+    GET_BLOCKED_LIST: '/users/blocked-list',
   },
   VIBES: {
     GET_ALL: '/vibes',

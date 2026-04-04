@@ -18,9 +18,24 @@ export const AuthValidator = {
   },
 
   /**
-   * Validates standard setup password length buffer.
+   * Validates password complexity: min 8, uppercase, lowercase, number and special char.
    */
-  validatePassword: (password: string, min: number = 4): boolean => {
-    return password.length >= min;
+  validatePassword: (password: string, min: number = 8): { isValid: boolean; message?: string } => {
+    if (password.length < min) {
+      return { isValid: false, message: `Mật khẩu phải có ít nhất ${min} ký tự.` };
+    }
+    const hasLowercase = /[a-z]/.test(password);
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecial = /[!@#$%^&*]/.test(password);
+    
+    if (!hasLowercase || !hasUppercase || !hasNumber || !hasSpecial) {
+      return { 
+        isValid: false, 
+        message: 'Mật khẩu phải bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt (!@#$%^&*).' 
+      };
+    }
+    
+    return { isValid: true };
   },
 };

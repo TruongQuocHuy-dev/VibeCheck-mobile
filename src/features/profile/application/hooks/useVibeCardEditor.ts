@@ -34,9 +34,11 @@ interface UseVibeCardEditor {
   saving: boolean;
   error: string | null;
   availableVibes: VibeTag[];
+  isGenderLocked: boolean;
+  isBirthYearLocked: boolean;
   updateField: <K extends keyof Omit<VibeCardFormData, 'photos' | 'vibes'>>(
     field: K,
-    value: string
+    value: VibeCardFormData[K]
   ) => void;
   toggleVibe: (vibeId: string) => void;
   pickAvatar: () => Promise<void>;
@@ -63,6 +65,8 @@ export const useVibeCardEditor = (props?: UseVibeCardEditorProps): UseVibeCardEd
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isGenderLocked, setIsGenderLocked] = useState(false);
+  const [isBirthYearLocked, setIsBirthYearLocked] = useState(false);
 
   // Load current profile + available vibe tags in parallel
   useEffect(() => {
@@ -73,6 +77,13 @@ export const useVibeCardEditor = (props?: UseVibeCardEditorProps): UseVibeCardEd
           apiClient.get(ENDPOINTS.VIBES.GET_ALL),
         ]);
         const user = profileRes?.user ?? profileRes;
+        
+        // Lock fields if they already exist
+        const hasGender = !!user.gender;
+        const hasBirthYear = !!user.birthYear;
+        setIsGenderLocked(hasGender);
+        setIsBirthYearLocked(hasBirthYear);
+
         setForm({
           fullName: user.fullName ?? '',
           displayName: user.displayName ?? '',
@@ -97,7 +108,7 @@ export const useVibeCardEditor = (props?: UseVibeCardEditorProps): UseVibeCardEd
   const updateField = useCallback(
     <K extends keyof Omit<VibeCardFormData, 'photos' | 'vibes'>>(
       field: K,
-      value: string
+      value: VibeCardFormData[K]
     ) => {
       setForm((prev) => ({ ...prev, [field]: value }));
     },
@@ -193,10 +204,12 @@ export const useVibeCardEditor = (props?: UseVibeCardEditorProps): UseVibeCardEd
       // 2. Update Vibes
       await apiClient.post(ENDPOINTS.USER.UPDATE_VIBES, { vibes: form.vibes });
       
-      // 3. Update Names
+      // 3. Update Names & Identity
       await apiClient.patch(ENDPOINTS.USER.UPDATE_PROFILE, {
         fullName: form.fullName,
         displayName: form.displayName,
+        gender: form.gender,
+        birthYear: form.birthYear,
       });
 
       showToast('Hồ sơ của bạn đã được cập nhật thành công!', 'success');
@@ -219,6 +232,8 @@ export const useVibeCardEditor = (props?: UseVibeCardEditorProps): UseVibeCardEd
     saving,
     error,
     availableVibes,
+    isGenderLocked,
+    isBirthYearLocked,
     updateField,
     toggleVibe,
     pickAvatar,

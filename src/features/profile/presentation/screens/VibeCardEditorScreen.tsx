@@ -27,6 +27,8 @@ export const VibeCardEditorScreen: React.FC = () => {
     saving,
     error,
     availableVibes,
+    isGenderLocked,
+    isBirthYearLocked,
     updateField,
     toggleVibe,
     pickAvatar,
@@ -99,19 +101,77 @@ export const VibeCardEditorScreen: React.FC = () => {
           <Text style={styles.avatarHint}>Nhấn để đổi ảnh đại diện</Text>
         </View>
 
-        {/* ── Identity (Read-only) ── */}
+        {/* ── Identity (Editable for supplementation) ── */}
         <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Thông tin định danh (Không thể sửa)</Text>
-          <View style={styles.readOnlyRow}>
-            <View style={styles.readOnlyItem}>
-              <Text style={styles.readOnlyLabel}>Giới tính</Text>
-              <Text style={styles.readOnlyValue}>
-                {form.gender === 'male' ? 'Nam' : form.gender === 'female' ? 'Nữ' : 'Chưa thiết lập'}
-              </Text>
+          <Text style={styles.label}>
+            Thông tin cơ bản {(isGenderLocked || isBirthYearLocked) && '(Đã khóa)'}
+          </Text>
+          <Text style={styles.sublabel}>
+            {(isGenderLocked || isBirthYearLocked)
+              ? 'Thông tin định danh đã được thiết lập và không thể thay đổi.'
+              : 'Các thông tin giúp định danh hồ sơ của bạn.'}
+          </Text>
+          <View style={styles.identityRow}>
+            <View style={[styles.identityItem, isGenderLocked && styles.identityItemLocked]}>
+              <View style={styles.fieldLabelRow}>
+                <Text style={styles.fieldInnerLabel}>Giới tính</Text>
+                {isGenderLocked && <Icon name="lock-closed" size={10} color={colors.textMuted} />}
+              </View>
+              <View style={styles.genderPillRow}>
+                {isGenderLocked ? (
+                  // Only show the selected one if locked
+                  <View style={[styles.genderPill, styles.genderPillActive, styles.genderPillLocked]}>
+                    <Text style={[styles.genderPillText, styles.genderPillTextActive]}>
+                      {form.gender === 'male' ? 'Nam' : 'Nữ'}
+                    </Text>
+                  </View>
+                ) : (
+                  // Show both options if not locked
+                  <>
+                    <TouchableOpacity
+                      style={[
+                        styles.genderPill,
+                        form.gender === 'male' && styles.genderPillActive
+                      ]}
+                      onPress={() => updateField('gender', 'male')}
+                    >
+                      <Text style={[
+                        styles.genderPillText,
+                        form.gender === 'male' && styles.genderPillTextActive
+                      ]}>Nam</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.genderPill,
+                        form.gender === 'female' && styles.genderPillActive
+                      ]}
+                      onPress={() => updateField('gender', 'female')}
+                    >
+                      <Text style={[
+                        styles.genderPillText,
+                        form.gender === 'female' && styles.genderPillTextActive
+                      ]}>Nữ</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
             </View>
-            <View style={styles.readOnlyItem}>
-              <Text style={styles.readOnlyLabel}>Năm sinh</Text>
-              <Text style={styles.readOnlyValue}>{form.birthYear ?? 'N/A'}</Text>
+
+            <View style={[styles.identityItem, isBirthYearLocked && styles.identityItemLocked]}>
+              <View style={styles.fieldLabelRow}>
+                <Text style={styles.fieldInnerLabel}>Năm sinh</Text>
+                {isBirthYearLocked && <Icon name="lock-closed" size={10} color={colors.textMuted} />}
+              </View>
+              <TextInput
+                style={[styles.identityInput, isBirthYearLocked && { opacity: 0.6 }]}
+                value={form.birthYear ? String(form.birthYear) : ''}
+                onChangeText={(v) => updateField('birthYear', v ? parseInt(v) : null)}
+                placeholder="20xx"
+                placeholderTextColor={colors.textOpacity60}
+                keyboardType="numeric"
+                maxLength={4}
+                editable={!isBirthYearLocked}
+              />
             </View>
           </View>
         </View>
@@ -250,7 +310,7 @@ const styles = StyleSheet.create({
   },
   backBtn: { padding: spacing.xs },
   headerTitle: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.xl,
     fontWeight: '700',
     color: colors.textPrimary,
   },
@@ -323,11 +383,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.overlayBorder,
   },
-  readOnlyRow: {
+  identityRow: {
     flexDirection: 'row',
     gap: spacing.md,
   },
-  readOnlyItem: {
+  identityItem: {
     flex: 1,
     backgroundColor: colors.bgTooltip,
     borderRadius: borderRadius.sm,
@@ -335,19 +395,65 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderWidth: 1,
     borderColor: colors.overlayBorder,
-    opacity: 0.8,
   },
-  readOnlyLabel: {
+  identityItemLocked: {
+    opacity: 0.7,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+  },
+  fieldLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  fieldInnerLabel: {
     fontSize: 10,
     color: colors.textOpacity60,
     textTransform: 'uppercase',
-    marginBottom: 2,
     fontWeight: '600',
   },
-  readOnlyValue: {
+  genderPillRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  genderPill: {
+    flex: 1,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: colors.overlayLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.overlayBorder,
+  },
+  genderPillActive: {
+    backgroundColor: 'rgba(0, 240, 255, 0.1)',
+    borderColor: colors.neonCyan,
+  },
+  genderPillDisabled: {
+    opacity: 0.5,
+    backgroundColor: colors.bgDark,
+    borderColor: 'transparent',
+  },
+  genderPillLocked: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: colors.overlayBorder,
+    opacity: 0.8,
+  },
+  genderPillText: {
+    fontSize: 12,
     color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  genderPillTextActive: {
+    color: colors.neonCyan,
+    fontWeight: '700',
+  },
+  identityInput: {
+    color: colors.textPrimary,
     fontSize: typography.sizes.md,
     fontWeight: '500',
+    padding: 0,
   },
   bioInput: { minHeight: 100 },
   charCount: {

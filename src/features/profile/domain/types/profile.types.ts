@@ -26,11 +26,12 @@ export interface PastVibeItem {
 
 export interface UserProfile {
   id: string;
-  username: string;
-  handle: string;
+  fullName: string;
+  displayName: string;
   avatar: string;
   isVerified: boolean;
   bio?: string;
+  gender?: string;
   stats?: UserStat[];
   currentVibe?: CurrentVibe;
   premiumPlan: PremiumPlan;

@@ -27,6 +27,12 @@ interface LoginResponse {
   user: { id: string; phone: string; displayName: string | null };
 }
 
+export interface ChangePasswordRequest {
+  oldPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 /**
  * POST /api/auth/check-phone
  * Checks if number is already registered.
@@ -59,4 +65,12 @@ const login = async (phone: string, password: string): Promise<LoginResponse> =>
   return apiClient.post(ENDPOINTS.AUTH.LOGIN, { phone, password });
 };
 
-export const AuthService = { checkPhone, register, setPassword, login };
+/**
+ * POST /api/auth/change-password
+ * Authenticated user changes their password.
+ */
+const changePassword = async (data: ChangePasswordRequest): Promise<void> => {
+  return apiClient.post(ENDPOINTS.AUTH.CHANGE_PASSWORD, data);
+};
+
+export const AuthService = { checkPhone, register, setPassword, login, changePassword };
