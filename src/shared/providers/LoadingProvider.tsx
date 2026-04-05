@@ -1,4 +1,4 @@
-import React, { createContext, useMemo, useState } from 'react';
+import React, { createContext, useMemo, useState, useCallback } from 'react';
 import { LoadingOverlay } from '../components/feedback/Loading';
 
 type LoadingContextValue = {
@@ -17,19 +17,23 @@ export const LoadingProvider = ({ children }: LoadingProviderProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | undefined>();
 
+  const showLoading = useCallback((nextMessage?: string) => {
+    setMessage(nextMessage);
+    setIsLoading(true);
+  }, []);
+
+  const hideLoading = useCallback(() => {
+    setIsLoading(false);
+    setMessage(undefined);
+  }, []);
+
   const value = useMemo(
     () => ({
-      showLoading: (nextMessage?: string) => {
-        setMessage(nextMessage);
-        setIsLoading(true);
-      },
-      hideLoading: () => {
-        setIsLoading(false);
-        setMessage(undefined);
-      },
+      showLoading,
+      hideLoading,
       isLoading,
     }),
-    [isLoading],
+    [showLoading, hideLoading, isLoading],
   );
 
   return (

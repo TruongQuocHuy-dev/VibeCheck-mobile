@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, Text, Image, TextInput, ActivityIndicator, StyleSheet, Platform } from 'react-native';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { View, Text, Image, TextInput, ActivityIndicator, StyleSheet } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../../../../core/theme/colors';
@@ -46,10 +45,7 @@ export const VibeViewfinder: React.FC<VibeViewfinderProps> = ({
 }) => {
   return (
     <View style={styles.vfContainer}>
-      <KeyboardAvoidingView
-        style={styles.vfWrapper}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <View style={styles.vfWrapper}>
         {/* Live camera */}
         {showCameraFeed && Camera && device && (
           <Camera
@@ -125,7 +121,7 @@ export const VibeViewfinder: React.FC<VibeViewfinderProps> = ({
               </View>
             )}
 
-            {vibeMode === 'photo' && (
+            {vibeMode === 'photo' && !!displayUri && (
               <TextInput
                 style={styles.captionInput}
                 placeholder="Thêm caption..."
@@ -139,7 +135,7 @@ export const VibeViewfinder: React.FC<VibeViewfinderProps> = ({
             )}
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </View>
   );
 };

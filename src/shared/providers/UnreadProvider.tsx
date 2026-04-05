@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { DeviceEventEmitter } from 'react-native';
 import { fetchConversations } from '../../infrastructure/services/chat.service';
+import { getAccessToken } from '../../infrastructure/storage/AsyncStorage';
 import { ConversationItem } from '../../features/chat/domain/types/chat.types';
 import { onSocketEvent, offSocketEvent } from '../../infrastructure/services/socket.service';
 
@@ -18,6 +19,12 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const refreshUnread = useCallback(async () => {
     try {
+      const token = await getAccessToken();
+      if (!token) {
+        setTotalUnread(0);
+        return;
+      }
+
       const conversations = await fetchConversations();
       const total = conversations.reduce((acc: number, conv: ConversationItem) => acc + (conv.unreadCount || 0), 0);
       setTotalUnread(total);

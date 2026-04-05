@@ -13,7 +13,7 @@ import { RootStackParamList } from '../../../../navigation/types';
 import { AuthService } from '../../../../infrastructure/services/auth.service';
 import { useLoading } from '../../../../shared/hooks/useLoading';
 import { useToast } from '../../../../shared/hooks/useToast';
-import { getUser, saveUser } from '../../../../infrastructure/storage/AsyncStorage';
+import { getUser, saveUser, getAccessToken } from '../../../../infrastructure/storage/AsyncStorage';
 import { BorderInput } from '../../../../components/atoms/BorderInput';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
@@ -51,6 +51,7 @@ export const CreatePasswordScreen: React.FC = () => {
     } else {
       hideLoading();
     }
+    return () => hideLoading(); // Ensure loading is hidden on unmount when navigating
   }, [loading, showLoading, hideLoading]);
 
   React.useEffect(() => {
@@ -88,6 +89,12 @@ export const CreatePasswordScreen: React.FC = () => {
           navigation.navigate('ProfileSetup');
         }
       } else {
+        // Ensure we have a token before proceeding
+        const token = await getAccessToken();
+        if (!token) {
+          throw new Error('Phiên làm việc hết hạn. Vui lòng xác thực lại số điện thoại.');
+        }
+
         await AuthService.setPassword(password);
 
         // Update local hydration flag

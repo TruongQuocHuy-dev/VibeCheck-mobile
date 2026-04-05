@@ -50,6 +50,7 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({ onLoginSuccess }) => {
     } else {
       hideLoading();
     }
+    return () => hideLoading(); // Ensure loading is hidden on unmount
   }, [loading, showLoading, hideLoading]);
 
   // Trigger global toast on error

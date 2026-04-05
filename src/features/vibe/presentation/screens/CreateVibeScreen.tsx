@@ -8,7 +8,9 @@ import {
   TouchableOpacity,
   View,
   Dimensions,
+  Platform,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Video from 'react-native-video';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -188,111 +190,117 @@ export const CreateVibeScreen: React.FC = () => {
       <View style={[styles.glow, styles.glowTL]} />
       <View style={[styles.glow, styles.glowBR]} />
 
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        {/* ══ Header ══ */}
-        <VibeCameraHeader
-          flash={flash}
-          facing={facing}
-          toggleFlash={toggleFlash}
-          onFlip={toggleFacing}
-          onClose={handleClose}
-          isLiveCamera={!displayUri && vibeMode === 'photo'}
-        />
-
-        <View style={{ flex: 1 }} pointerEvents="box-none">
-          <VibeViewfinder
-            showCameraFeed={showCameraFeed}
-            Camera={Camera}
-            cameraRef={cameraRef}
-            device={device}
-            onCameraInitialized={() => setIsCameraReady(true)}
-            displayUri={displayUri}
-            previewPhoto={previewPhoto ?? null}
-            vibeMode={vibeMode}
-            caption={caption}
-            onCaptionChange={handleCaptionChange}
-            maxCaptionLength={maxCaptionLength}
-            activeFilterId={activeFilterId}
-            intensity={intensity}
-            onApplyFilter={applyFilter}
-            location={location}
+      <KeyboardAvoidingView
+        style={styles.safeArea}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+          {/* ══ Header ══ */}
+          <VibeCameraHeader
+            flash={flash}
+            facing={facing}
+            toggleFlash={toggleFlash}
+            onFlip={toggleFacing}
+            onClose={handleClose}
+            isLiveCamera={!displayUri && vibeMode === 'photo'}
           />
 
-          <View style={styles.overlayExtras} pointerEvents="box-none">
-            {displayUri && vibeMode === 'photo' && (
-              <View style={styles.captionRow}>
-                <TouchableOpacity style={styles.retakeBtn} onPress={handleRetake}>
-                  <Icon name="camera-retake-outline" size={14} color={colors.white} />
-                  <Text style={styles.retakeTxt}>Chụp lại</Text>
-                </TouchableOpacity>
-                <View style={{ flex: 1 }} />
-                <Text style={styles.charCounter}>{captionLength}/{maxCaptionLength}</Text>
-              </View>
-            )}
+          <View style={{ flex: 1 }} pointerEvents="box-none">
+            <VibeViewfinder
+              showCameraFeed={showCameraFeed}
+              Camera={Camera}
+              cameraRef={cameraRef}
+              device={device}
+              onCameraInitialized={() => setIsCameraReady(true)}
+              displayUri={displayUri}
+              previewPhoto={previewPhoto ?? null}
+              vibeMode={vibeMode}
+              caption={caption}
+              onCaptionChange={handleCaptionChange}
+              maxCaptionLength={maxCaptionLength}
+              activeFilterId={activeFilterId}
+              intensity={intensity}
+              onApplyFilter={applyFilter}
+              location={location}
+            />
 
-            {vibeMode === 'text' && (
-              <View style={styles.captionRow}>
-                <View style={{ flex: 1 }} />
-                <Text style={styles.charCounter}>{captionLength}/{maxCaptionLength}</Text>
-              </View>
-            )}
-          </View>
+            <View style={styles.overlayExtras} pointerEvents="box-none">
+              {displayUri && vibeMode === 'photo' && (
+                <View style={styles.captionRow}>
+                  <TouchableOpacity style={styles.retakeBtn} onPress={handleRetake}>
+                    <Icon name="camera-retake-outline" size={14} color={colors.white} />
+                    <Text style={styles.retakeTxt}>Chụp lại</Text>
+                  </TouchableOpacity>
+                  <View style={{ flex: 1 }} />
+                  <Text style={styles.charCounter}>{captionLength}/{maxCaptionLength}</Text>
+                </View>
+              )}
 
-          {/* Track chip */}
-          {selectedTrack && (
-            <TouchableOpacity style={styles.trackChip} onPress={openMusicModal}>
-              <Icon name="music-note" size={14} color={colors.vibeCyan} />
-              <Text style={styles.trackChipTxt} numberOfLines={1}>
-                {selectedTrack.title} · {selectedTrack.artist} ({musicDuration}s)
-              </Text>
-              <Icon name="chevron-right" size={14} color={colors.textOpacity60} />
-            </TouchableOpacity>
-          )}
-        </View>
+              {vibeMode === 'text' && (
+                <View style={styles.captionRow}>
+                  <View style={{ flex: 1 }} />
+                  <Text style={styles.charCounter}>{captionLength}/{maxCaptionLength}</Text>
+                </View>
+              )}
+            </View>
 
-        {/* ══ Bottom Action Bar ══ */}
-        <View style={styles.footerContainer}>
-          {!displayUri && (
-            <VibeModeSwitcher mode={vibeMode} onModeChange={handleModeSwitch} />
-          )}
-
-          <View style={styles.footer}>
-            <TouchableOpacity style={styles.footerIconBtn} onPress={handlePickImage}>
-              <Icon name="image-multiple-outline" size={24} color={colors.whiteOpacity80} />
-            </TouchableOpacity>
-
-            {canSubmit || displayUri || vibeMode === 'text' ? (
-              <TouchableOpacity
-                style={[styles.postButton, !canSubmit && { opacity: 0.5 }]}
-                onPress={vibeMode === 'text' ? handleSubmit : handleCapturePress}
-                disabled={isSubmitting || !canSubmit}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator size="small" color={colors.bgDark} />
-                ) : (
-                  <>
-                    <Icon name="send" size={20} color={colors.bgDark} />
-                    <Text style={styles.postBtnTxt}>Đăng Vibe</Text>
-                  </>
-                )}
+            {/* Track chip */}
+            {selectedTrack && (
+              <TouchableOpacity style={styles.trackChip} onPress={openMusicModal}>
+                <Icon name="music-note" size={14} color={colors.vibeCyan} />
+                <Text style={styles.trackChipTxt} numberOfLines={1}>
+                  {selectedTrack.title} · {selectedTrack.artist} ({musicDuration}s)
+                </Text>
+                <Icon name="chevron-right" size={14} color={colors.textOpacity60} />
               </TouchableOpacity>
-            ) : (
-              <VibeCaptureButton onPress={handleCapturePress} />
+            )}
+          </View>
+
+          {/* ══ Bottom Action Bar ══ */}
+          <View style={styles.footerContainer}>
+            {!displayUri && (
+              <VibeModeSwitcher mode={vibeMode} onModeChange={handleModeSwitch} />
             )}
 
-            <TouchableOpacity
-              style={[styles.footerIconBtn, !!selectedTrack && styles.footerIconBtnActive]}
-              onPress={openMusicModal}
-            >
-              <Icon
-                name="music-note"
-                size={24}
-                color={selectedTrack ? colors.vibeCyan : colors.whiteOpacity80}
-              />
-            </TouchableOpacity>
+            <View style={styles.footer}>
+              <TouchableOpacity style={styles.footerIconBtn} onPress={handlePickImage}>
+                <Icon name="image-multiple-outline" size={24} color={colors.whiteOpacity80} />
+              </TouchableOpacity>
+
+              {canSubmit || displayUri || vibeMode === 'text' ? (
+                <TouchableOpacity
+                  style={[styles.postButton, !canSubmit && { opacity: 0.5 }]}
+                  onPress={vibeMode === 'text' ? handleSubmit : handleCapturePress}
+                  disabled={isSubmitting || !canSubmit}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator size="small" color={colors.bgDark} />
+                  ) : (
+                    <>
+                      <Icon name="send" size={20} color={colors.bgDark} />
+                      <Text style={styles.postBtnTxt}>Đăng Vibe</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              ) : (
+                <VibeCaptureButton onPress={handleCapturePress} />
+              )}
+
+              <TouchableOpacity
+                style={[styles.footerIconBtn, !!selectedTrack && styles.footerIconBtnActive]}
+                onPress={openMusicModal}
+              >
+                <Icon
+                  name="music-note"
+                  size={24}
+                  color={selectedTrack ? colors.vibeCyan : colors.whiteOpacity80}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
 
       <MusicSelectorModal
         visible={showMusicModal}

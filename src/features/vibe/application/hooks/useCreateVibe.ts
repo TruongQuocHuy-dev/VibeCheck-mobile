@@ -10,7 +10,7 @@ import {
 import { VibeTrack, VibeLocationInfo } from '../../domain/types/create-vibe.types';
 import apiClient from '../../../../infrastructure/api/axios';
 import { ENDPOINTS } from '../../../../infrastructure/api/endpoints';
-import { PermissionsAndroid, Platform } from 'react-native';
+import { PermissionsAndroid, Platform, Alert } from 'react-native';
 
 type CreateVibeNav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -212,7 +212,26 @@ export const useCreateVibe = (showToast?: ShowToast) => {
 
   // ── Handlers ──
 
-  const handleClose = useCallback(() => navigation.goBack(), [navigation]);
+  const handleClose = useCallback(() => {
+    const hasChanges = caption.trim().length > 0 || !!imageAsset || selectedTrackId !== 'no-music';
+
+    if (hasChanges) {
+      Alert.alert(
+        'Hủy bỏ thay đổi?',
+        'Nội dung Vibe bạn đang tạo sẽ bị mất nếu bạn thoát ngay lúc này.',
+        [
+          { text: 'Tiếp tục chỉnh sửa', style: 'cancel' },
+          { 
+            text: 'Rời đi', 
+            style: 'destructive',
+            onPress: () => navigation.goBack(),
+          },
+        ],
+      );
+    } else {
+      navigation.goBack();
+    }
+  }, [navigation, caption, imageAsset, selectedTrackId]);
 
   const handlePickImage = useCallback(async () => {
     const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.8 });
