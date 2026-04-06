@@ -38,6 +38,9 @@ export type RootStackParamList = {
   VibeCardEditor: undefined;
   ChangePassword: undefined;
   BlockedList: undefined;
+  SupportContact: undefined;
+  TermsOfService: undefined;
+  PrivacyPolicy: undefined;
 }
 
 

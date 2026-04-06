@@ -69,7 +69,7 @@ export const VibeInteractionModal: React.FC<VibeInteractionModalProps> = ({
           ) : (
             <FlatList
               data={interactions}
-              keyExtractor={(item, index) => item._id || index.toString()}
+              keyExtractor={(item, index) => item.sender?._id || item._id || index.toString()}
               contentContainerStyle={styles.interactionsList}
               renderItem={({ item }) => (
                 <View style={styles.interactionItem}>

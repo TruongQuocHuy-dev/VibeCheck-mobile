@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../../navigation/types';
@@ -42,7 +43,18 @@ export const useSettings = () => {
         navigation.navigate('BlockedList');
         break;
       case 'faq':
-        console.log('Open FAQ');
+        Linking.openURL('https://vibecheck.app/faq').catch(err => 
+          console.error('Could not open FAQ URL', err)
+        );
+        break;
+      case 'support-contact':
+        navigation.navigate('SupportContact');
+        break;
+      case 'terms':
+        navigation.navigate('TermsOfService');
+        break;
+      case 'privacy-policy':
+        navigation.navigate('PrivacyPolicy');
         break;
       case 'delete-account':
         console.log('Delete account pressed');

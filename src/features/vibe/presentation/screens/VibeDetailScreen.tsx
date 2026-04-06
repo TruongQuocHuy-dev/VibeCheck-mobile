@@ -138,7 +138,7 @@ export const VibeDetailScreen: React.FC = () => {
                 <View style={styles.viewerIconList}>
                   {interactions.slice(0, 3).map((inter, idx) => (
                     <Image
-                      key={inter._id || `viewer-${idx}`}
+                      key={inter.sender?._id || inter._id || `viewer-${idx}`}
                       source={{ uri: inter.sender?.avatar }}
                       style={[styles.viewerTinyAvatar, { marginLeft: idx > 0 ? -spacing.sm : 0, zIndex: 10 - idx }]}
                     />
@@ -235,6 +235,7 @@ const styles = StyleSheet.create({
   keyboardView: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'flex-end',
+    zIndex: 10,
   },
   bottomOverlay: {
     paddingHorizontal: spacing.md,

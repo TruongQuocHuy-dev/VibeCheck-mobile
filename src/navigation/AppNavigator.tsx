@@ -20,6 +20,9 @@ import { FeedScreen } from '../features/posts/presentation/screens/FeedScreen';
 import { VibeCardEditorScreen } from '../features/profile/presentation/screens/VibeCardEditorScreen';
 import { ChangePasswordScreen } from '../features/auth/presentation/screens/ChangePasswordScreen';
 import { BlockedListScreen } from '../features/profile/presentation/screens/BlockedListScreen';
+import { SupportContactScreen } from '../features/profile/presentation/screens/SupportContactScreen';
+import { TermsOfServiceScreen } from '../features/profile/presentation/screens/TermsOfServiceScreen';
+import { PrivacyPolicyScreen } from '../features/profile/presentation/screens/PrivacyPolicyScreen';
 
 import { getUser, getAccessToken } from '../infrastructure/storage/AsyncStorage';
 import apiClient from '../infrastructure/api/axios';
@@ -297,6 +300,9 @@ export const AppNavigator = () => {
           <Stack.Screen name="VibeCardEditor" component={VibeCardEditorScreen} />
           <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
           <Stack.Screen name="BlockedList" component={BlockedListScreen} />
+          <Stack.Screen name="SupportContact" component={SupportContactScreen} />
+          <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} />
+          <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
         </>
       )}
     </Stack.Navigator>
