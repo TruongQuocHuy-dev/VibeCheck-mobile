@@ -16,6 +16,7 @@ export type RootStackParamList = {
     initialIndex?: number;
     userName?: string;
     userAvatar?: string;
+    isMe?: boolean;
   };
   MatchProfile: {
     id: string;

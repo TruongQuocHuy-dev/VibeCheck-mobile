@@ -139,6 +139,7 @@ export const useMatches = () => {
         stories: (story as any).stories || [], 
         userName: story.ownerName,
         userAvatar: story.ownerAvatar,
+        isMe: false,
       });
     },
     [navigation],
@@ -171,6 +172,7 @@ export const useMatches = () => {
         navigation.navigate('VibeDetail', {
           userId: 'me',
           stories: data.ownVibeStories,
+          isMe: true,
         });
       }
     },

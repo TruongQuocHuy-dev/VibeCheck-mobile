@@ -23,6 +23,7 @@ export const ENDPOINTS = {
     BLOCK: '/users/block',
     UNBLOCK: '/users/unblock',
     GET_BLOCKED_LIST: '/users/blocked-list',
+    UPDATE_PRIVACY: '/users/privacy',
   },
   VIBES: {
     GET_ALL: '/vibes',

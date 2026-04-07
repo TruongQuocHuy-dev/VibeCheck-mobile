@@ -9,6 +9,8 @@ export const initialSettingsToggles: SettingsToggleState = {
   messages: true,
   promotions: false,
   darkMode: true,
+  showDistance: true,
+  showOnlineStatus: true,
 };
 
 export const settingsSections: SettingsSection[] = [
@@ -74,20 +76,20 @@ export const settingsSections: SettingsSection[] = [
     title: 'QUYỀN RIÊNG TƯ',
     items: [
       {
-        id: 'location-visibility',
-        title: 'Hiển thị vị trí',
+        id: 'show-distance',
+        title: 'Hiển thị khoảng cách',
         icon: 'location-outline',
         iconColor: colors.primary,
-        type: 'value',
-        valueText: 'Công khai',
-        valueTone: 'primary',
+        type: 'toggle',
+        toggleKey: 'showDistance',
       },
       {
-        id: 'online-status',
+        id: 'show-online',
         title: 'Trạng thái trực tuyến',
         icon: 'eye-outline',
         iconColor: colors.primary,
-        type: 'link',
+        type: 'toggle',
+        toggleKey: 'showOnlineStatus',
       },
       {
         id: 'blocked-list',

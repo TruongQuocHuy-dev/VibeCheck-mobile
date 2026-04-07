@@ -139,7 +139,6 @@ export const ChatDetailScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.borderDark} />
       <ChatDetailHeader
         name={name}
         avatar={avatar}

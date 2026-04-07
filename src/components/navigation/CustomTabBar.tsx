@@ -43,17 +43,17 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
 
     if (route.name === 'Discovery') {
       iconName = isFocused ? 'sparkles' : 'sparkles-outline';
-      label = 'Discovery';
+      label = 'Khám phá';
     } else if (route.name === 'Matches') {
       iconName = isFocused ? 'heart' : 'heart-outline';
-      label = 'Matches';
+      label = 'Ghép đôi';
     } else if (route.name === 'Chat') {
       iconName = isFocused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline';
-      label = 'Chat';
+      label = 'Tin nhắn';
       showBadge = totalUnread > 0;
     } else if (route.name === 'Profile') {
       iconName = isFocused ? 'person' : 'person-outline';
-      label = 'Profile';
+      label = 'Cá nhân';
     }
 
     return (
@@ -67,10 +67,10 @@ export const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
         style={styles.tabItem}
       >
         <View>
-          <Icon 
-            name={iconName} 
-            size={24} 
-            color={isFocused ? colors.primary : colors.textSecondary} 
+          <Icon
+            name={iconName}
+            size={24}
+            color={isFocused ? colors.primary : colors.textSecondary}
           />
           {showBadge && (
             <View style={styles.badge}>

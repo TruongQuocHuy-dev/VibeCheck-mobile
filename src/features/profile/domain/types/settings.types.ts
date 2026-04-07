@@ -1,4 +1,4 @@
-export type SettingsToggleKey = 'newMatches' | 'messages' | 'promotions' | 'darkMode';
+export type SettingsToggleKey = 'newMatches' | 'messages' | 'promotions' | 'darkMode' | 'showOnlineStatus' | 'showDistance';
 
 export type SettingsItemType = 'link' | 'toggle' | 'value' | 'danger' | 'external';
 

@@ -40,8 +40,7 @@ export const MatchesScreen: React.FC = () => {
   const contentBottomPadding = insets.bottom + spacing.xxl + spacing.xl;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.bgDark} />
+    <SafeAreaView style={styles.container} edges={['top']}>
 
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Matches</Text>

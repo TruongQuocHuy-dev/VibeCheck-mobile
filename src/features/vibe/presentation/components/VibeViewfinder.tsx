@@ -211,8 +211,8 @@ const styles = StyleSheet.create({
   },
   textModeInput: {
     color: colors.white,
-    fontSize: typography.sizes.xxxl,
-    lineHeight: 40,
+    fontSize: typography.sizes.xxl,
+    lineHeight: 32,
     fontWeight: typography.weights.bold,
     width: '100%',
     padding: spacing.md,

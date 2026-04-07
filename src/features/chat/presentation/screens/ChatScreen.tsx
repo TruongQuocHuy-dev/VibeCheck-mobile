@@ -8,7 +8,7 @@ import {
   StatusBar,
   ActivityIndicator,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
@@ -73,12 +73,10 @@ export const ChatScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-
+    <SafeAreaView style={styles.container} edges={['top']}>
       <LinearGradient
         colors={[colors.bgDark, 'transparent']}
-        style={[styles.headerGradient, { paddingTop: insets.top }]}
+        style={[styles.headerGradient]}
       >
         <View style={styles.header}>
           <View>
@@ -140,7 +138,7 @@ export const ChatScreen: React.FC = () => {
         onSelect={handleMatchSelect}
         onClose={toggleMatchModal}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 

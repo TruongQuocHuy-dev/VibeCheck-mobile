@@ -78,6 +78,7 @@ export const CreateVibeScreen: React.FC = () => {
     switchMode,
     fetchDefaultTracks,
     applyFilter,
+    resetImage,
     setSearchKeyword,
   } = useCreateVibe(showToast);
 
@@ -123,7 +124,8 @@ export const CreateVibeScreen: React.FC = () => {
 
   const handleRetake = React.useCallback(() => {
     resetPhoto();
-  }, [resetPhoto]);
+    resetImage();
+  }, [resetPhoto, resetImage]);
 
   const handleModeSwitch = React.useCallback((mode: 'photo' | 'text') => {
     switchMode(mode);

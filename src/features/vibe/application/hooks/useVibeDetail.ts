@@ -18,6 +18,7 @@ type VibeDetailRouteParams = {
   initialIndex?: number;
   userName?: string;
   userAvatar?: string;
+  isMe?: boolean;
 };
 
 export const useVibeDetail = () => {
@@ -87,8 +88,9 @@ export const useVibeDetail = () => {
   }, [currentIndex, currentStory, isPaused, handleNext, progressAnim, storyDuration]);
 
   const isOwner = useMemo(() => {
+    if (params.isMe !== undefined) return params.isMe;
     return params.userId === 'me' || params.userId === myId;
-  }, [params.userId, myId]);
+  }, [params.userId, myId, params.isMe]);
 
   const fetchInteractions = useCallback(async () => {
     if (!currentStory || !isOwner) return;
@@ -129,12 +131,25 @@ export const useVibeDetail = () => {
     if (!currentStory) return null;
     
     // Check if viewing own story
-    const isOwnerAction = params.userId === 'me' || params.userId === myId;
+    const isOwnerAction = params.isMe !== undefined 
+      ? params.isMe 
+      : (params.userId === 'me' || params.userId === myId);
+
+    const formatLocation = (loc: any) => {
+      if (!loc) return null;
+      if (typeof loc === 'string') return loc;
+      if (loc.type === 'Point' && Array.isArray(loc.coordinates)) {
+        const [lng, lat] = loc.coordinates;
+        if (lng === 0 && lat === 0) return null;
+        return `Lat: ${lat.toFixed(2)}, Lng: ${lng.toFixed(2)}`;
+      }
+      return null;
+    };
 
     return {
       id: (currentStory.id || currentStory._id || '').toString(),
       caption: currentStory.caption || '',
-      location: currentStory.location || null,
+      location: formatLocation(currentStory.location),
       expiresAt: currentStory.expiresAt,
       backgroundImage: (currentStory.imageUrl || currentStory.backgroundImage || '').toString(),
       track: currentStory.music || null,
@@ -229,8 +244,6 @@ export const useVibeDetail = () => {
   }, []);
 
   const handleMenuPress = useCallback(() => {
-    const isOwner = params.userId === 'me' || params.userId === myId;
-
     if (isOwner) {
       Alert.alert(
         'Tùy chọn',
@@ -265,7 +278,7 @@ export const useVibeDetail = () => {
         },
       ]);
     }
-  }, [currentStory, params.userId, ownProfileData?.id, navigation, showToast]);
+  }, [currentStory, isOwner, navigation, showToast]);
 
   return {
     detail,

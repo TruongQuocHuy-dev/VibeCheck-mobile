@@ -19,7 +19,7 @@ interface ChatDetailHeaderProps {
 export const ChatDetailHeader: React.FC<ChatDetailHeaderProps> = ({
   name,
   avatar,
-  isOnline = false,
+  isOnline, // Default to undefined to detect "Hidden"
   lastActive = null,
   isBlocked = false,
   onBack,
@@ -27,6 +27,9 @@ export const ChatDetailHeader: React.FC<ChatDetailHeaderProps> = ({
   formatLastActive,
   isInfoMode = false,
 }) => {
+  // Show status if data is available (not hidden by privacy)
+  const hasStatus = isOnline !== undefined || (lastActive !== null && lastActive !== undefined);
+
   return (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
@@ -44,7 +47,7 @@ export const ChatDetailHeader: React.FC<ChatDetailHeaderProps> = ({
             </View>
             <View style={styles.headerInfo}>
               <Text style={styles.headerName}>{name}</Text>
-              {!isBlocked && (
+              {!isBlocked && hasStatus && (
                 <Text style={[styles.headerStatus, isOnline && styles.headerStatusOnline]}>
                   {isOnline ? 'Đang hoạt động' : formatLastActive?.(lastActive)}
                 </Text>

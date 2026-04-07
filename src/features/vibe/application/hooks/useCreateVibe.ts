@@ -282,6 +282,10 @@ export const useCreateVibe = (showToast?: ShowToast) => {
     setActiveFilterId((prev) => (prev === filterId ? null : filterId));
   }, []);
 
+  const resetImage = useCallback(() => {
+    setImageAsset(null);
+  }, []);
+
   const handleSubmit = useCallback(async () => {
     if (!imageAsset?.uri && (!caption || caption.trim() === '')) {
       showToast?.('Vui lòng chụp hoặc chọn ảnh, hoặc nhập nội dung để đăng Vibe.', 'error');
@@ -379,6 +383,7 @@ export const useCreateVibe = (showToast?: ShowToast) => {
     switchMode,
     fetchDefaultTracks,
     applyFilter,
+    resetImage,
     setSearchKeyword,
   };
 };

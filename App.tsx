@@ -14,6 +14,7 @@ import { LoadingProvider } from './src/shared/providers/LoadingProvider';
 import { NetworkProvider } from './src/shared/providers/NetworkProvider';
 import { UnreadProvider } from './src/shared/providers/UnreadProvider';
 
+import { StatusBar } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 function App() {
@@ -25,6 +26,11 @@ function App() {
             <NetworkProvider>
               <UnreadProvider>
                 <NavigationContainer>
+                  <StatusBar 
+                    translucent 
+                    backgroundColor="transparent" 
+                    barStyle="light-content" 
+                  />
                   <AppNavigator />
                 </NavigationContainer>
               </UnreadProvider>

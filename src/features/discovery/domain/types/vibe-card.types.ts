@@ -27,6 +27,7 @@ export interface Candidate {
   birthYear: number | null;
   photos: string[];  // Extra photos for card detail
   hasLikedMe?: boolean;
+  distance?: string;
 }
 
 export interface DiscoveryFilters {

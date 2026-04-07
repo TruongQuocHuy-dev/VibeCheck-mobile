@@ -8,8 +8,8 @@ import { useUnreadCount } from '../../../../shared/providers/UnreadProvider';
 import { useToast } from '../../../../shared/hooks/useToast';
 
 interface InitialStatus {
-  isOnline: boolean;
-  lastActive: string | null;
+  isOnline?: boolean;
+  lastActive?: string | null;
   otherUserId?: string;
   blockedByMe?: boolean;
   isBlockedByOther?: boolean;
@@ -34,8 +34,8 @@ export const useChatDetail = (conversationId: string, initialStatus?: InitialSta
   const typingTimeoutRef = useRef<any>(null);
   const isFetchingRef = useRef<boolean>(false);
   
-  const [otherUserStatus, setOtherUserStatus] = useState<{ isOnline: boolean; lastActive: string | null }>({
-    isOnline: initialStatus?.isOnline ?? false,
+  const [otherUserStatus, setOtherUserStatus] = useState<{ isOnline?: boolean; lastActive?: string | null }>({
+    isOnline: initialStatus?.isOnline,
     lastActive: initialStatus?.lastActive ?? null,
   });
 
@@ -47,7 +47,7 @@ export const useChatDetail = (conversationId: string, initialStatus?: InitialSta
       const data = await ProfileService.getPublicProfile(targetId);
       if (data) {
         setOtherUserStatus({
-          isOnline: data.isOnline ?? false,
+          isOnline: data.isOnline,
           lastActive: data.lastActive || null,
         });
       }
@@ -224,11 +224,11 @@ export const useChatDetail = (conversationId: string, initialStatus?: InitialSta
         ));
       };
 
-      const handleStatusUpdate = (payload: { userId: string; isOnline: boolean; lastActive: string }) => {
+      const handleStatusUpdate = (payload: { userId: string; isOnline?: boolean; lastActive?: string }) => {
         const updatedUserId = payload.userId.toString().toLowerCase();
         const targetUserId = otherUserIdRef.current?.toString().toLowerCase();
         if (updatedUserId === targetUserId) {
-          setOtherUserStatus({ isOnline: payload.isOnline, lastActive: payload.lastActive });
+          setOtherUserStatus({ isOnline: payload.isOnline, lastActive: payload.lastActive ?? null });
         }
       };
 

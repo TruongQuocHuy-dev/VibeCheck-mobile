@@ -157,7 +157,7 @@ export const DiscoveryScreen: React.FC = () => {
               <View style={styles.locationContainerCard}>
                 <Icon name="location" size={13} color={colors.neonCyan} />
                 <Text style={styles.locationTextCard} numberOfLines={1}>
-                  Gần bạn
+                  {item.distance ? `Cách bạn ${item.distance} km` : 'Gần bạn'}
                 </Text>
               </View>
               <View style={styles.actionButtons}>
@@ -185,7 +185,6 @@ export const DiscoveryScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.bgDark} />
 
       {/* Header */}
       <View style={styles.header}>

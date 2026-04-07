@@ -21,7 +21,7 @@ interface ChatItemProps {
 }
 
 export const ChatItem: React.FC<ChatItemProps> = ({ item, onPress, onLongPress }) => {
-  const isOnline = item.user?.isOnline ?? false;
+  const isOnline = item.user?.isOnline;
   const fullName = item.user?.fullName || CHAT_STRINGS.unnamed_user;
   const avatar = item.user?.avatar || 'https://via.placeholder.com/150';
 
@@ -56,7 +56,7 @@ export const ChatItem: React.FC<ChatItemProps> = ({ item, onPress, onLongPress }
     >
       <View style={styles.avatarContainer}>
         <Image source={{ uri: avatar }} style={styles.avatar} />
-        {isOnline && <View style={styles.onlineBadge} />}
+        {isOnline === true && <View style={styles.onlineBadge} />}
         {item.isPinned && (
           <View style={styles.pinnedIndicator}>
             <Icon name="pin" size={10} color={colors.white} />
