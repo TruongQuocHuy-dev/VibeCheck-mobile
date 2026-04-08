@@ -13,6 +13,7 @@ import { spacing, borderRadius } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme';
 import type { Candidate } from '../../domain/types/vibe-card.types';
 import { useVibeTags } from '../../application/hooks/useVibeTags';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -58,6 +59,12 @@ export const DiscoveryCard = React.memo(({ candidate }: DiscoveryCardProps) => {
               <Text style={styles.ageText}>, {age}</Text>
             ) : null}
           </Text>
+          <View style={styles.locationContainerCard}>
+            <Icon name="location" size={14} color={colors.neonCyan} />
+            <Text style={styles.locationTextCard} numberOfLines={1}>
+              {candidate.distance ? `Cách bạn ${candidate.distance} km` : 'Gần bạn'}
+            </Text>
+          </View>
         </LinearGradient>
       </View>
 
@@ -158,6 +165,16 @@ const styles = StyleSheet.create({
   ageText: {
     fontSize: 28,
     fontWeight: '400',
+    color: colors.textOpacity80,
+  },
+  locationContainerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: spacing.xs,
+  },
+  locationTextCard: {
+    fontSize: typography.sizes.sm,
     color: colors.textOpacity80,
   },
   infoSection: {

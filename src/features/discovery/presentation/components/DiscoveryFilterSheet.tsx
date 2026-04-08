@@ -14,7 +14,7 @@ import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme';
 import type { DiscoveryFilters } from '../../domain/types/vibe-card.types';
-import { fetchCandidatesEstimate } from '../../data/discovery.service';
+import { fetchCandidatesEstimate } from '../../../../infrastructure/services/discovery.service';
 
 type GenderFilter = DiscoveryFilters['gender'];
 

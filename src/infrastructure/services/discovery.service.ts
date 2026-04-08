@@ -1,6 +1,6 @@
-import apiClient from '../../../infrastructure/api/axios';
-import { ENDPOINTS } from '../../../infrastructure/api/endpoints';
-import type { Candidate, MatchResult, DiscoveryFilters } from '../domain/types/vibe-card.types';
+import apiClient from '../api/axios';
+import { ENDPOINTS } from '../api/endpoints';
+import type { Candidate, MatchResult, DiscoveryFilters } from '../../features/discovery/domain/types/vibe-card.types';
 
 /**
  * Fetch candidate users for the swipe feed.

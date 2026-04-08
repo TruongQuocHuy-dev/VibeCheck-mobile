@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -23,6 +24,7 @@ export const NotificationsScreen: React.FC = () => {
     tabs,
     activeTab,
     filteredItems,
+    loading,
     menuVisible,
     selectionMode,
     selectedIds,
@@ -132,7 +134,11 @@ export const NotificationsScreen: React.FC = () => {
         contentContainerStyle={[styles.contentContainer, { paddingBottom: bottomPadding }]}
         showsVerticalScrollIndicator={false}
       >
-        {filteredItems.length > 0 ? (
+        {loading ? (
+          <View style={styles.emptyWrap}>
+            <ActivityIndicator size="large" color={colors.neonCyan} />
+          </View>
+        ) : filteredItems.length > 0 ? (
           filteredItems.map((item) => (
             <NotificationItemCard
               key={item.id}

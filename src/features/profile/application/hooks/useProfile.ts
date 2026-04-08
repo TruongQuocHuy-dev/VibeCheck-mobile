@@ -8,7 +8,7 @@ import { ENDPOINTS } from '../../../../infrastructure/api/endpoints';
 import { ProfileService } from '../../../../infrastructure/services/profile.service';
 import { chatSocketService } from '../../../chat/data/ChatSocketService';
 import { chatRepository } from '../../../chat/data/ChatRepository';
-import { LocationService } from '../../../../infrastructure/services/LocationService';
+import { LocationService } from '../../../../infrastructure/services/location.service';
 
 type ProfileNavigation = NativeStackNavigationProp<RootStackParamList>;
 

@@ -18,7 +18,7 @@ import { DiscoveryCard } from '../components/DiscoveryCard';
 import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
 import type { Candidate, DiscoveryFilters } from '../../domain/types/vibe-card.types';
-import { blockCandidate, fetchCandidates, reportCandidate } from '../../data/discovery.service';
+import { blockCandidate, fetchCandidates, reportCandidate } from '../../../../infrastructure/services/discovery.service';
 import { DiscoveryFilterSheet } from '../components/DiscoveryFilterSheet';
 import { UserSafetyActionSheet } from '../../../../shared/components/actions/index';
 import { useToast } from '../../../../shared/hooks/useToast';

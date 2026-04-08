@@ -16,7 +16,6 @@ import { ProfileScreen } from '../features/profile/presentation/screens/ProfileS
 import { SettingsScreen } from '../features/profile/presentation/screens/SettingsScreen';
 import { CreateVibeScreen } from '../features/vibe/presentation/screens/CreateVibeScreen';
 import { VibeDetailScreen } from '../features/vibe/presentation/screens/VibeDetailScreen';
-import { FeedScreen } from '../features/posts/presentation/screens/FeedScreen';
 import { VibeCardEditorScreen } from '../features/profile/presentation/screens/VibeCardEditorScreen';
 import { ChangePasswordScreen } from '../features/auth/presentation/screens/ChangePasswordScreen';
 import { BlockedListScreen } from '../features/profile/presentation/screens/BlockedListScreen';
@@ -296,7 +295,6 @@ export const AppNavigator = () => {
             component={MatchRevealScreen}
             options={{ animation: 'none' }}
           />
-          <Stack.Screen name="Feed" component={FeedScreen} />
           <Stack.Screen name="VibeCardEditor" component={VibeCardEditorScreen} />
           <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
           <Stack.Screen name="BlockedList" component={BlockedListScreen} />

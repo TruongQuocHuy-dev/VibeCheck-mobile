@@ -52,12 +52,12 @@ export const ENDPOINTS = {
     DELIVERED: (id: string) => `/conversations/messages/${id}/delivered`,
     UPLOAD: '/media/upload',
   },
-  POSTS: {
-    FEED: '/posts',                        // GET: paginated feed
-    CREATE: '/posts',                      // POST: create post
-    LIKE: (id: string) => `/posts/${id}/like`,       // POST: toggle like
-    COMMENT: (id: string) => `/posts/${id}/comments`, // POST: add comment
-    DELETE: (id: string) => `/posts/${id}`,           // DELETE
+  NOTIFICATIONS: {
+    LIST: '/notifications',
+    READ_ALL: '/notifications/read-all',
+    READ_ONE: (id: string) => `/notifications/${id}/read`,
+    DELETE_ONE: (id: string) => `/notifications/${id}`,
+    DELETE_ALL: '/notifications',
   },
   VIBE_STORIES: {
     FEED: '/vibe-stories/feed',              // GET: feed of matches' stories

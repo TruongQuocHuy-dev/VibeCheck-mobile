@@ -9,7 +9,7 @@ import {
   interpolateColor,
 } from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { submitSwipe, undoDislikeSwipe } from '../../data/discovery.service';
+import { submitSwipe, undoDislikeSwipe } from '../../../../infrastructure/services/discovery.service';
 import type { Candidate, MatchResult } from '../../domain/types/vibe-card.types';
 import { onSocketEvent, offSocketEvent } from '../../../../infrastructure/services/socket.service';
 

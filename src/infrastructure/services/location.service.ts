@@ -44,7 +44,7 @@ export const LocationService = {
   /**
    * Get current position with options
    */
-  getCurrentPosition: (): Promise<Geolocation.GeoPosition> => {
+  getCurrentPosition: (showDialog: boolean = false): Promise<Geolocation.GeoPosition> => {
     return new Promise((resolve, reject) => {
       Geolocation.getCurrentPosition(
         (position) => resolve(position),
@@ -53,6 +53,7 @@ export const LocationService = {
           enableHighAccuracy: true,
           timeout: 15000,
           maximumAge: 10000,
+          showLocationDialog: showDialog,
         }
       );
     });
@@ -84,7 +85,7 @@ export const LocationService = {
       const hasPermission = await LocationService.requestPermission();
       if (!hasPermission) return;
 
-      const position = await LocationService.getCurrentPosition();
+      const position = await LocationService.getCurrentPosition(false);
       const { latitude, longitude } = position.coords;
       const now = Date.now();
 
@@ -122,8 +123,16 @@ export const LocationService = {
         timestamp: now,
       };
       await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(newCache));
-    } catch (error) {
-      console.error('[LocationService] Sync error:', error);
+    } catch (error: any) {
+      if (error?.code === 2) {
+        // POSITION_UNAVAILABLE (GPS turned off)
+        console.log('[LocationService] Location disabled by user. Skip sync.');
+      } else if (error?.code === 1) {
+        // PERMISSION_DENIED
+        console.log('[LocationService] Location permission denied. Skip sync.');
+      } else {
+        console.warn('[LocationService] Sync error:', error?.message || error);
+      }
     }
   },
 };

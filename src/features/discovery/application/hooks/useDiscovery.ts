@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { fetchCandidates, submitSwipe } from '../../data/discovery.service';
+import { fetchCandidates, submitSwipe } from '../../../../infrastructure/services/discovery.service';
 import type { Candidate, MatchResult, DiscoveryFilters } from '../../domain/types/vibe-card.types';
 import { onSocketEvent, offSocketEvent } from '../../../../infrastructure/services/socket.service';
 

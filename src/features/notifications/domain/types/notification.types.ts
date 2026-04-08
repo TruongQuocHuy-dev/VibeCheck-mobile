@@ -1,21 +1,6 @@
-export type NotificationFilterTab = 'all' | 'unread' | 'saved';
+export type NotificationFilterTab = 'all' | 'unread';
 
-export type NotificationKind = 'match' | 'message' | 'like' | 'system';
-
-export interface NotificationMatchTarget {
-  id: string;
-  name: string;
-  age: number;
-  avatar: string;
-  isOnline?: boolean;
-}
-
-export interface NotificationChatTarget {
-  chatId: string;
-  name: string;
-  avatar: string;
-  isOnline: boolean;
-}
+export type NotificationKind = 'match' | 'message' | 'like' | 'story' | 'system';
 
 export interface NotificationItem {
   id: string;
@@ -25,15 +10,12 @@ export interface NotificationItem {
   timeLabel: string;
   avatar?: string;
   isUnread?: boolean;
-  isSaved?: boolean;
-  dimmed?: boolean;
-  highlightText?: string;
-  matchTarget?: NotificationMatchTarget;
-  chatTarget?: NotificationChatTarget;
+  metadata?: Record<string, any>;
 }
 
 export interface NotificationsScreenData {
   title: string;
   tabs: Array<{ id: NotificationFilterTab; label: string }>;
   items: NotificationItem[];
+  unreadCount: number;
 }
