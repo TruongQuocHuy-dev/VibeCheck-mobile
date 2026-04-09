@@ -22,6 +22,7 @@ import { colors } from '../../../../core/theme/colors';
 import { typography } from '../../../../core/theme';
 import { DiscoveryFilterSheet } from '../components/DiscoveryFilterSheet';
 import { EmptyState } from '../../../../shared/components/feedback/Empty';
+import { useUnreadCount } from '../../../../shared/providers/UnreadProvider';
 
 const { width, height } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.85;
@@ -39,6 +40,7 @@ export const DiscoveryScreen: React.FC = () => {
     refreshCandidates,
     loading,
   } = useDiscovery();
+  const { unreadNotifications } = useUnreadCount();
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
@@ -197,7 +199,7 @@ export const DiscoveryScreen: React.FC = () => {
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.notificationButton} onPress={() => navigation.navigate('Notifications')}>
             <Icon name="notifications-outline" size={20} color={colors.white} />
-            <View style={styles.notificationBadge} />
+            {unreadNotifications > 0 && <View style={styles.notificationBadge} />}
           </TouchableOpacity>
           <TouchableOpacity style={styles.menuButton} onPress={() => setIsFilterSheetVisible(true)}>
             <Icon name="options-outline" size={20} color={colors.white} />

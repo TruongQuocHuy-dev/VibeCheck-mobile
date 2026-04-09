@@ -1,12 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { DeviceEventEmitter } from 'react-native';
 import { fetchConversations } from '../../infrastructure/services/chat.service';
+import { NotificationService } from '../../infrastructure/services/notification.service';
 import { getAccessToken } from '../../infrastructure/storage/AsyncStorage';
 import { ConversationItem } from '../../features/chat/domain/types/chat.types';
 import { onSocketEvent, offSocketEvent } from '../../infrastructure/services/socket.service';
 
 interface UnreadContextType {
   totalUnread: number;
+  unreadNotifications: number;
   refreshUnread: () => Promise<void>;
   setActiveConversationId: (id: string | null) => void;
 }
@@ -15,6 +17,7 @@ const UnreadContext = createContext<UnreadContextType | undefined>(undefined);
 
 export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [totalUnread, setTotalUnread] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
 
   const refreshUnread = useCallback(async () => {
@@ -22,12 +25,19 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const token = await getAccessToken();
       if (!token) {
         setTotalUnread(0);
+        setUnreadNotifications(0);
         return;
       }
 
-      const conversations = await fetchConversations();
-      const total = conversations.reduce((acc: number, conv: ConversationItem) => acc + (conv.unreadCount || 0), 0);
-      setTotalUnread(total);
+      // Fetch both messages and notifications unread counts
+      const [conversations, notificationData] = await Promise.all([
+        fetchConversations(),
+        NotificationService.getAll(1, 1), // Just need the unreadCount
+      ]);
+
+      const messageTotal = conversations.reduce((acc: number, conv: ConversationItem) => acc + (conv.unreadCount || 0), 0);
+      setTotalUnread(messageTotal);
+      setUnreadNotifications(notificationData.unreadCount || 0);
     } catch (error) {
       console.error('[UnreadProvider] Error fetching unread count:', error);
     }
@@ -38,13 +48,17 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     refreshUnread();
 
     const handleMessageNotification = (payload: { conversationId: string }) => {
-      // Logic để tránh tăng badge nếu đang ở chính phòng đó
+      // Logic to avoid increasing badge if in the same room
       if (payload.conversationId === activeConversationId) {
         return;
       }
       
-      // Tăng số lượng local để hiển thị ngay lập tức (Real-time)
+      // Increase local count for immediate feedback
       setTotalUnread(prev => prev + 1);
+    };
+
+    const handleUnreadNotificationCount = (payload: { unreadCount: number }) => {
+      setUnreadNotifications(payload.unreadCount);
     };
 
     const handleNewMatch = () => {
@@ -53,6 +67,7 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const setupListeners = () => {
       onSocketEvent('message_notification', handleMessageNotification);
+      onSocketEvent('unread_notification_count', handleUnreadNotificationCount);
       onSocketEvent('new_match', handleNewMatch);
     };
 
@@ -63,13 +78,14 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     return () => {
       offSocketEvent('message_notification', handleMessageNotification);
+      offSocketEvent('unread_notification_count', handleUnreadNotificationCount);
       offSocketEvent('new_match', handleNewMatch);
       sub.remove();
     };
   }, [refreshUnread, activeConversationId]);
 
   return (
-    <UnreadContext.Provider value={{ totalUnread, refreshUnread, setActiveConversationId }}>
+    <UnreadContext.Provider value={{ totalUnread, unreadNotifications, refreshUnread, setActiveConversationId }}>
       {children}
     </UnreadContext.Provider>
   );
