@@ -42,6 +42,18 @@ apiClient.interceptors.response.use(
         console.log('Event emit error:', e);
       }
     }
+    
+    if (error.response && (error.response.status === 403 || error.response.data?.code === 'BANNED')) {
+      try {
+        const { DeviceEventEmitter } = require('react-native');
+        DeviceEventEmitter.emit('account_suspended', {
+          banReason: error.response.data?.banReason || 'Vi phạm Tiêu chuẩn Cộng đồng của chúng tôi.'
+        });
+      } catch (e) {
+        console.log('Event emit error:', e);
+      }
+    }
+
     const message =
       error.response?.data?.message || error.message || 'Lỗi kết nối máy chủ';
     const enhancedError = new Error(message) as any;

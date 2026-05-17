@@ -7,6 +7,7 @@ import { CreatePasswordScreen } from '../features/auth/presentation/screens/Crea
 import { ProfileSetupScreen } from '../features/auth/presentation/screens/ProfileSetupScreen';
 import { VibePickerScreen } from '../features/auth/presentation/screens/VibePickerScreen';
 import { TabNavigator } from './TabNavigator';
+import { SuspendedScreen } from '../features/auth/presentation/screens/SuspendedScreen';
 import { ChatDetailScreen } from '../features/chat/presentation/screens/ChatDetailScreen';
 import { ChatInfoScreen } from '../features/chat/presentation/screens/ChatInfoScreen';
 import { DiscoveryDetailScreen } from '../features/discovery/presentation/screens/DiscoveryDetailScreen';
@@ -34,7 +35,8 @@ import { useUnreadCount } from '../shared/providers/UnreadProvider';
 
 export const AppNavigator = () => {
   const { refreshUnread } = useUnreadCount();
-  const [appState, setAppState] = React.useState<'LOADING' | 'AUTH' | 'ONBOARDING_PASS' | 'ONBOARDING_PROFILE' | 'ONBOARDING_VIBES' | 'MAIN'>('LOADING');
+  const [appState, setAppState] = React.useState<'LOADING' | 'AUTH' | 'ONBOARDING_PASS' | 'ONBOARDING_PROFILE' | 'ONBOARDING_VIBES' | 'MAIN' | 'BANNED'>('LOADING');
+  const [banReason, setBanReason] = React.useState<string>('');
   const appStateRef = React.useRef(AppState.currentState);
 
   const checkAndNavigate = React.useCallback(async () => {
@@ -56,6 +58,12 @@ export const AppNavigator = () => {
         await saveUser(apiUser); // Save full profile
       }
 
+      if (apiUser?.status === 'banned') {
+        setBanReason(apiUser.banReason || 'Vi phạm Tiêu chuẩn Cộng đồng');
+        setAppState('BANNED');
+        return;
+      }
+
       // Decision logic correctly based on latest API state
       if (apiUser?.hasPassword === false) {
         setAppState('ONBOARDING_PASS');
@@ -66,7 +74,12 @@ export const AppNavigator = () => {
       } else {
         setAppState('MAIN');
       }
-    } catch (err) {
+    } catch (err: any) {
+      if (err.status === 403 || err.data?.code === 'BANNED') {
+        setBanReason(err.data?.banReason || 'Vi phạm Tiêu chuẩn Cộng đồng');
+        setAppState('BANNED');
+        return;
+      }
       const user: any = await getUser();
       if (user?.hasPassword) {
         setAppState('ONBOARDING_PASS');
@@ -80,6 +93,12 @@ export const AppNavigator = () => {
     checkAndNavigate();
   }, [checkAndNavigate]);
 
+  const handleLogout = React.useCallback(async () => {
+    const { clearSession } = require('../infrastructure/storage/AsyncStorage');
+    await clearSession();
+    setAppState('AUTH');
+  }, []);
+
   React.useEffect(() => {
     const sub = DeviceEventEmitter.addListener('unauthorized_token_expired', () => {
       setAppState('ONBOARDING_PASS');
@@ -90,17 +109,30 @@ export const AppNavigator = () => {
     });
 
     const sub3 = DeviceEventEmitter.addListener('logout', async () => {
-      const { clearSession } = require('../infrastructure/storage/AsyncStorage');
-      await clearSession();
-      setAppState('AUTH');
+      await handleLogout();
+    });
+
+    const sub4 = DeviceEventEmitter.addListener('account_suspended', (data: any) => {
+      setBanReason(data.banReason || 'Vi phạm Tiêu chuẩn Cộng đồng');
+      setAppState('BANNED');
+    });
+
+    const { onSocketEvent, offSocketEvent } = require('../infrastructure/services/socket.service');
+    onSocketEvent('account_banned', (data: any) => {
+      console.log('⚠️ [Socket] Received account_banned event:', data);
+      setBanReason(data.reason || 'Vi phạm Tiêu chuẩn Cộng đồng');
+      setAppState('BANNED');
+      disconnectSocket();
     });
 
     return () => {
       sub.remove();
       sub2.remove();
       sub3.remove();
+      sub4.remove();
+      offSocketEvent('account_banned');
     };
-  }, []);
+  }, [checkAndNavigate, handleLogout]);
 
   // Handle Socket Connection based on AppState (Background/Foreground)
   React.useEffect(() => {
@@ -302,6 +334,17 @@ export const AppNavigator = () => {
           <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} />
           <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
         </>
+      )}
+
+      {appState === 'BANNED' && (
+        <Stack.Screen name="Suspended">
+          {props => (
+            <SuspendedScreen
+              banReason={banReason}
+              onLogout={handleLogout}
+            />
+          )}
+        </Stack.Screen>
       )}
     </Stack.Navigator>
   );
